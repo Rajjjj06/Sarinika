@@ -28,7 +28,7 @@ export function DashboardNav() {
             <div className="p-2 bg-primary/10 rounded-lg">
               <Brain className="w-5 h-5 text-primary" />
             </div>
-            <span className="text-foreground">Sarinika</span>
+            <span className="text-foreground">Serenica</span>
           </Link>
 
           <div className="hidden md:flex items-center gap-1">

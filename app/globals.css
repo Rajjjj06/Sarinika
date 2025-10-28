@@ -5,74 +5,86 @@
 
 :root {
   /* Peaceful and soothing color palette for mental health app */
-  --background: oklch(0.985 0.008 230);
-  --foreground: oklch(0.25 0.015 260);
-  --card: oklch(0.995 0.005 220);
-  --card-foreground: oklch(0.25 0.015 260);
-  --popover: oklch(0.995 0.005 220);
-  --popover-foreground: oklch(0.25 0.015 260);
-  --primary: oklch(0.65 0.12 280);
-  --primary-foreground: oklch(0.985 0.008 230);
-  --secondary: oklch(0.7 0.1 180);
-  --secondary-foreground: oklch(0.25 0.015 260);
-  --muted: oklch(0.94 0.008 220);
-  --muted-foreground: oklch(0.45 0.015 260);
-  --accent: oklch(0.75 0.1 320);
-  --accent-foreground: oklch(0.25 0.015 260);
+  /* Primary Background: #F9FAFB */
+  --background: oklch(0.983 0.002 245);
+  /* Header Text: #1E293B */
+  --foreground: oklch(0.238 0.025 252);
+  /* Card Background: #FFFFFF */
+  --card: oklch(1 0 0);
+  /* Header Text: #1E293B */
+  --card-foreground: oklch(0.238 0.025 252);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.238 0.025 252);
+  /* Primary Accent: #3EC1C9 */
+  --primary: oklch(0.72 0.09 190);
+  --primary-foreground: oklch(1 0 0);
+  /* Secondary Accent: #A7E1E8 */
+  --secondary: oklch(0.88 0.04 195);
+  --secondary-foreground: oklch(0.238 0.025 252);
+  /* Footer/Muted Section: #F1F5F9 */
+  --muted: oklch(0.957 0.005 237);
+  /* Body Text: #334155 */
+  --muted-foreground: oklch(0.34 0.02 255);
+  /* Secondary Accent: #A7E1E8 */
+  --accent: oklch(0.88 0.04 195);
+  --accent-foreground: oklch(0.238 0.025 252);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.577 0.245 27.325);
   --border: oklch(0.92 0.01 220);
   --input: oklch(0.96 0.008 220);
-  --ring: oklch(0.65 0.12 280);
-  --chart-1: oklch(0.65 0.12 280);
-  --chart-2: oklch(0.7 0.1 180);
-  --chart-3: oklch(0.75 0.1 320);
-  --chart-4: oklch(0.7 0.1 200);
-  --chart-5: oklch(0.8 0.08 140);
+  --ring: oklch(0.72 0.09 190);
+  --chart-1: oklch(0.72 0.09 190);
+  --chart-2: oklch(0.88 0.04 195);
+  --chart-3: oklch(0.7 0.1 320);
+  --chart-4: oklch(0.65 0.12 200);
+  --chart-5: oklch(0.75 0.08 150);
   --radius: 0.75rem;
-  --sidebar: oklch(0.985 0.008 230);
-  --sidebar-foreground: oklch(0.25 0.015 260);
-  --sidebar-primary: oklch(0.65 0.12 280);
-  --sidebar-primary-foreground: oklch(0.985 0.008 230);
-  --sidebar-accent: oklch(0.7 0.1 180);
-  --sidebar-accent-foreground: oklch(0.25 0.015 260);
+  --sidebar: oklch(0.983 0.002 245);
+  --sidebar-foreground: oklch(0.238 0.025 252);
+  --sidebar-primary: oklch(0.72 0.09 190);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.88 0.04 195);
+  --sidebar-accent-foreground: oklch(0.238 0.025 252);
   --sidebar-border: oklch(0.92 0.01 220);
-  --sidebar-ring: oklch(0.65 0.12 280);
+  --sidebar-ring: oklch(0.72 0.09 190);
 }
 
 .dark {
-  --background: oklch(0.15 0.01 250);
+  /* Dark mode using #1E293B as base for background */
+  --background: oklch(0.15 0.015 250);
   --foreground: oklch(0.95 0.01 250);
-  --card: oklch(0.2 0.01 250);
+  --card: oklch(0.18 0.015 250);
   --card-foreground: oklch(0.95 0.01 250);
-  --popover: oklch(0.2 0.01 250);
+  --popover: oklch(0.18 0.015 250);
   --popover-foreground: oklch(0.95 0.01 250);
-  --primary: oklch(0.65 0.15 250);
-  --primary-foreground: oklch(0.15 0.01 250);
-  --secondary: oklch(0.75 0.12 160);
-  --secondary-foreground: oklch(0.15 0.01 250);
-  --muted: oklch(0.3 0.01 250);
-  --muted-foreground: oklch(0.7 0.02 250);
-  --accent: oklch(0.8 0.1 290);
-  --accent-foreground: oklch(0.15 0.01 250);
-  --destructive: oklch(0.396 0.141 25.723);
+  /* Primary Accent (teal) for dark mode */
+  --primary: oklch(0.65 0.12 200);
+  --primary-foreground: oklch(0.95 0.01 250);
+  /* Secondary Accent (aqua) for dark mode */
+  --secondary: oklch(0.75 0.08 200);
+  --secondary-foreground: oklch(0.15 0.015 250);
+  --muted: oklch(0.25 0.015 250);
+  --muted-foreground: oklch(0.75 0.02 250);
+  --accent: oklch(0.75 0.08 200);
+  --accent-foreground: oklch(0.15 0.015 250);
+  --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.637 0.237 25.331);
-  --border: oklch(0.3 0.01 250);
-  --input: oklch(0.25 0.01 250);
-  --ring: oklch(0.65 0.15 250);
-  --chart-1: oklch(0.65 0.15 250);
-  --chart-2: oklch(0.75 0.12 160);
-  --chart-3: oklch(0.8 0.1 290);
-  --chart-4: oklch(0.7 0.1 200);
-  --chart-5: oklch(0.85 0.08 180);
-  --sidebar: oklch(0.2 0.01 250);
+  --border: oklch(0.28 0.015 250);
+  --input: oklch(0.22 0.015 250);
+  --ring: oklch(0.65 0.12 200);
+  --chart-1: oklch(0.65 0.12 200);
+  --chart-2: oklch(0.75 0.08 200);
+  --chart-3: oklch(0.7 0.12 280);
+  --chart-4: oklch(0.68 0.1 240);
+  --chart-5: oklch(0.72 0.09 180);
+  --sidebar: oklch(0.18 0.015 250);
   --sidebar-foreground: oklch(0.95 0.01 250);
-  --sidebar-primary: oklch(0.65 0.15 250);
-  --sidebar-primary-foreground: oklch(0.15 0.01 250);
-  --sidebar-accent: oklch(0.75 0.12 160);
-  --sidebar-accent-foreground: oklch(0.15 0.01 250);
-  --sidebar-border: oklch(0.3 0.01 250);
-  --sidebar-ring: oklch(0.65 0.15 250);
+  --sidebar-primary: oklch(0.65 0.12 200);
+  --sidebar-primary-foreground: oklch(0.95 0.01 250);
+  --sidebar-accent: oklch(0.75 0.08 200);
+  --sidebar-accent-foreground: oklch(0.15 0.015 250);
+  --sidebar-border: oklch(0.28 0.015 250);
+  --sidebar-ring: oklch(0.65 0.12 200);
 }
 
 @theme inline {
@@ -121,22 +133,22 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-gradient-to-br from-blue-50 via-purple-50 to-cyan-50 text-foreground min-h-screen;
+    @apply bg-[#F9FAFB] text-foreground min-h-screen;
   }
 }
 
 /* Added soothing gradient background utilities */
 @layer utilities {
   .gradient-bg {
-    @apply bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-50;
+    @apply bg-gradient-to-br from-[#F9FAFB] via-[#F1F5F9] to-[#A7E1E8];
   }
   
   .gradient-bg-alt {
-    @apply bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50;
+    @apply bg-gradient-to-br from-[#F1F5F9] via-[#A7E1E8] to-[#3EC1C9];
   }
   
   .gradient-bg-soft {
-    @apply bg-gradient-to-br from-cyan-50 via-blue-50 to-violet-50;
+    @apply bg-gradient-to-br from-[#A7E1E8] via-[#F1F5F9] to-[#F9FAFB];
   }
   
   .card-soft {

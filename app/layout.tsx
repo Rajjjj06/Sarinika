@@ -8,7 +8,7 @@ const _geist = Geist({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Sarinika - AI Mental Health Journaling",
+  title: "Serenica - AI Mental Health Journaling",
   description: "Your personal AI-powered mental health companion for mindfulness and self-reflection",
   generator: "v0.app",
 }

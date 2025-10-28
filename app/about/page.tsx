@@ -15,9 +15,9 @@ export default function AboutPage() {
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         {/* About Section */}
         <section className="mb-16 slide-up">
-          <h1 className="text-4xl font-bold text-foreground mb-6">About Sarinika</h1>
+          <h1 className="text-4xl font-bold text-foreground mb-6">About Serenica</h1>
           <p className="text-lg text-muted-foreground mb-4">
-            Sarinika is an AI-powered mental health companion designed to help you understand your emotions, track your
+            Serenica is an AI-powered mental health companion designed to help you understand your emotions, track your
             wellness journey, and grow through mindful journaling and personalized insights.
           </p>
           <p className="text-lg text-muted-foreground">
@@ -58,7 +58,7 @@ export default function AboutPage() {
 
         {/* Features */}
         <section className="mb-16">
-          <h2 className="text-3xl font-bold text-foreground mb-8">Why Sarinika?</h2>
+          <h2 className="text-3xl font-bold text-foreground mb-8">Why Serenica?</h2>
           <div className="space-y-4">
             {[
               "AI-powered insights that understand your emotional patterns",
@@ -80,7 +80,7 @@ export default function AboutPage() {
         <section className="text-center">
           <h2 className="text-3xl font-bold text-foreground mb-4">Ready to Start?</h2>
           <p className="text-lg text-muted-foreground mb-8">
-            Join thousands of people taking control of their mental health with Sarinika.
+            Join thousands of people taking control of their mental health with Serenica.
           </p>
           <Link href="/login">
             <Button size="lg">Get Started Today</Button>

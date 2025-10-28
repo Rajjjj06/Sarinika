@@ -45,7 +45,7 @@ export default function LoginPage() {
             {isSignUp ? "Create Account" : "Welcome Back"}
           </h1>
           <p className="text-center text-muted-foreground mb-6">
-            {isSignUp ? "Start your mental health journey with Sarinika" : "Sign in to continue your wellness journey"}
+            {isSignUp ? "Start your mental health journey with Serenica" : "Sign in to continue your wellness journey"}
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">

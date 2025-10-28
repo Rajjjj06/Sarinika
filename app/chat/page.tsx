@@ -49,7 +49,7 @@ export default function ChatPage() {
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
           <h1 className="text-3xl font-bold text-foreground mb-2">Mindful Conversations</h1>
           <p className="text-muted-foreground">
-            Chat with Sarinika, your empathetic AI companion. Together, we'll explore your thoughts and feelings using
+            Chat with Serenica, your empathetic AI companion. Together, we'll explore your thoughts and feelings using
             evidence-based CBT techniques.
           </p>
         </motion.div>
@@ -108,7 +108,7 @@ export default function ChatPage() {
                 <div className="bg-secondary text-secondary-foreground px-4 py-3 rounded-lg rounded-bl-none">
                   <div className="flex items-center gap-2">
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span className="text-sm">Sarinika is thinking...</span>
+                    <span className="text-sm">Serenica is thinking...</span>
                   </div>
                 </div>
               </motion.div>
@@ -145,7 +145,7 @@ export default function ChatPage() {
           className="mt-6 p-4 bg-accent/10 border border-accent/20 rounded-lg"
         >
           <p className="text-xs text-muted-foreground">
-            <strong>Important:</strong> Sarinika is an AI companion designed to support your mental wellness journey.
+            <strong>Important:</strong> Serenica is an AI companion designed to support your mental wellness journey.
             This is not a substitute for professional medical advice, diagnosis, or treatment. If you're experiencing a
             mental health crisis, please reach out to a mental health professional or crisis helpline immediately.
           </p>

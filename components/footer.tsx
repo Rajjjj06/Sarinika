@@ -11,7 +11,7 @@ export function Footer() {
               <div className="p-2 bg-primary/10 rounded-lg">
                 <Brain className="w-5 h-5 text-primary" />
               </div>
-              <span className="font-bold text-foreground">Sarinika</span>
+              <span className="font-bold text-foreground">Serenica</span>
             </div>
             <p className="text-sm text-muted-foreground">
               Your AI-powered mental health companion for mindfulness and self-reflection.
@@ -78,7 +78,7 @@ export function Footer() {
         </div>
 
         <div className="border-t border-border pt-8 text-center text-sm text-muted-foreground">
-          <p>&copy; 2025 Sarinika. All rights reserved.</p>
+          <p>&copy; 2025 Serenica. All rights reserved.</p>
         </div>
       </div>
     </footer>

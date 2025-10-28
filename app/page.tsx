@@ -86,7 +86,7 @@ export default function Home() {
             transition={{ duration: 0.6, delay: 0.3 }}
             className="text-lg sm:text-xl text-muted-foreground mb-8 text-balance max-w-2xl mx-auto"
           >
-            Sarinika helps you understand your emotions, track your mental wellness, and grow through AI-powered
+            Serenica helps you understand your emotions, track your mental wellness, and grow through AI-powered
             insights and mindful journaling.
           </motion.p>
 
@@ -113,7 +113,7 @@ export default function Home() {
       {/* Features Section */}
       <ScrollSection className="py-16 px-4 sm:px-6 lg:px-8 bg-card/30 backdrop-blur-sm">
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-3xl font-bold text-center mb-12 text-foreground">Why Choose Sarinika?</h2>
+          <h2 className="text-3xl font-bold text-center mb-12 text-foreground">Why Choose Serenica?</h2>
 
           <div className="grid md:grid-cols-3 gap-6">
             {[
@@ -144,7 +144,7 @@ export default function Home() {
         <div className="max-w-2xl mx-auto text-center">
           <h2 className="text-3xl font-bold mb-4 text-foreground">Ready to Start Your Journey?</h2>
           <p className="text-lg text-muted-foreground mb-8">
-            Join thousands of people taking control of their mental health with Sarinika.
+            Join thousands of people taking control of their mental health with Serenica.
           </p>
           <Link href="/login">
             <Button size="lg" className="w-full sm:w-auto">
