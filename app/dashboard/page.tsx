@@ -221,11 +221,23 @@ export default function DashboardPage() {
         // Prepare weekly entries data
         const last4Weeks: any[] = []
         const now = new Date()
+        // Get the current day of week (0 = Sunday, 1 = Monday, etc.)
+        const dayOfWeek = now.getDay()
+        // Calculate how many days to go back to get to Sunday (start of week)
+        // If today is Sunday (0), go back 0 days. If Monday (1), go back 1 day, etc.
+        const daysToSunday = dayOfWeek === 0 ? 0 : dayOfWeek
+        
+        // Build from oldest (Week 4) to newest (Week 1) so Week 1 appears first in chart
         for (let i = 3; i >= 0; i--) {
+          // Calculate week start (Sunday) for each of the last 4 weeks
           const weekStart = new Date(now)
-          weekStart.setDate(weekStart.getDate() - (i * 7 + 6))
+          weekStart.setDate(weekStart.getDate() - daysToSunday - (i * 7))
+          weekStart.setHours(0, 0, 0, 0)
+          
+          // Week ends on Saturday (6 days after Sunday)
           const weekEnd = new Date(weekStart)
           weekEnd.setDate(weekEnd.getDate() + 6)
+          weekEnd.setHours(23, 59, 59, 999)
 
           const weekEntries = journalEntries.filter(entry => {
             if (!entry.createdAt?.toDate) return false
@@ -233,11 +245,15 @@ export default function DashboardPage() {
             return entryDate >= weekStart && entryDate <= weekEnd
           })
 
+          // Week 1 is most recent (i=0), Week 4 is oldest (i=3)
           last4Weeks.push({
-            week: `Week ${4 - i}`,
+            week: `Week ${i + 1}`,
             entries: weekEntries.length,
           })
         }
+        
+        // Reverse so Week 1 (current week) appears first in the chart
+        last4Weeks.reverse()
 
         setStreakData(last4Weeks)
       } catch (error) {
