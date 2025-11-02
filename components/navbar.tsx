@@ -3,8 +3,11 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Brain } from "lucide-react"
+import { useAuth } from "@/contexts/auth-context"
 
 export function Navbar() {
+  const { user, loading } = useAuth()
+
   return (
     <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -26,14 +29,26 @@ export function Navbar() {
           </div>
 
           <div className="flex items-center gap-4">
-            <Link href="/login">
-              <Button variant="outline" size="sm">
-                Sign In
-              </Button>
-            </Link>
-            <Link href="/login">
-              <Button size="sm">Get Started</Button>
-            </Link>
+            {!loading && (
+              <>
+                {user ? (
+                  <Link href="/dashboard">
+                    <Button size="sm">Get Started</Button>
+                  </Link>
+                ) : (
+                  <>
+                    <Link href="/login">
+                      <Button variant="outline" size="sm">
+                        Sign In
+                      </Button>
+                    </Link>
+                    <Link href="/login">
+                      <Button size="sm">Get Started</Button>
+                    </Link>
+                  </>
+                )}
+              </>
+            )}
           </div>
         </div>
       </div>

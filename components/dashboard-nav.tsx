@@ -2,13 +2,25 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Brain, LayoutDashboard, BookOpen, TrendingUp, User, LogOut, MessageCircle, Menu, X } from "lucide-react"
+import { useAuth } from "@/contexts/auth-context"
 
 export function DashboardNav() {
   const pathname = usePathname()
+  const router = useRouter()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const { logout } = useAuth()
+
+  const handleLogout = async () => {
+    try {
+      await logout()
+      router.push("/login")
+    } catch (error) {
+      console.error("Logout error:", error)
+    }
+  }
 
   const isActive = (path: string) => pathname.startsWith(path)
 
@@ -43,12 +55,15 @@ export function DashboardNav() {
           </div>
 
           <div className="flex items-center gap-2">
-            <Link href="/" className="hidden sm:block">
-              <Button variant="ghost" size="sm" className="gap-2">
-                <LogOut className="w-4 h-4" />
-                Logout
-              </Button>
-            </Link>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="gap-2 hidden sm:flex"
+              onClick={handleLogout}
+            >
+              <LogOut className="w-4 h-4" />
+              Logout
+            </Button>
 
             {/* Mobile Menu Button */}
             <Button
@@ -81,12 +96,16 @@ export function DashboardNav() {
                 </div>
               </Link>
             ))}
-            <Link href="/" onClick={() => setMobileMenuOpen(false)}>
-              <div className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted text-foreground mt-2">
-                <LogOut className="w-5 h-5" />
-                <span className="font-medium">Logout</span>
-              </div>
-            </Link>
+            <div 
+              className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted text-foreground mt-2 cursor-pointer"
+              onClick={async () => {
+                setMobileMenuOpen(false)
+                await handleLogout()
+              }}
+            >
+              <LogOut className="w-5 h-5" />
+              <span className="font-medium">Logout</span>
+            </div>
           </div>
         </div>
       )}

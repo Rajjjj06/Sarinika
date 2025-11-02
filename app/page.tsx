@@ -8,6 +8,7 @@ import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
 import { Heart, Brain, Sparkles, TrendingUp } from "lucide-react"
 import { motion, useInView } from "framer-motion"
+import { useAuth } from "@/contexts/auth-context"
 
 function FeatureCard({ feature, index }: { feature: any; index: number }) {
   const ref = useRef(null)
@@ -48,6 +49,7 @@ function ScrollSection({ children, className }: { children: React.ReactNode; cla
 
 export default function Home() {
   const [isScrolled, setIsScrolled] = useState(false)
+  const { user } = useAuth()
 
   return (
     <div className="min-h-screen gradient-bg-soft">
@@ -146,9 +148,9 @@ export default function Home() {
           <p className="text-lg text-muted-foreground mb-8">
             Join thousands of people taking control of their mental health with Serenica.
           </p>
-          <Link href="/login">
+          <Link href={user ? "/dashboard" : "/login"}>
             <Button size="lg" className="w-full sm:w-auto">
-              Sign Up Now
+              {user ? "Go to Dashboard" : "Sign Up Now"}
             </Button>
           </Link>
         </div>

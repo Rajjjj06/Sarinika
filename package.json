@@ -9,6 +9,7 @@
     "start": "next start"
   },
   "dependencies": {
+    "@ai-sdk/groq": "^2.0.25",
     "@ai-sdk/react": "latest",
     "@emotion/is-prop-valid": "latest",
     "@hookform/resolvers": "^3.10.0",
@@ -47,7 +48,9 @@
     "cmdk": "1.0.4",
     "date-fns": "4.1.0",
     "embla-carousel-react": "8.5.1",
+    "firebase": "^12.4.0",
     "framer-motion": "latest",
+    "groq-sdk": "^0.34.0",
     "input-otp": "1.4.1",
     "lucide-react": "^0.454.0",
     "next": "16.0.0",

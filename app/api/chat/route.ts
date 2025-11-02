@@ -1,6 +1,6 @@
-import { consumeStream, convertToModelMessages, streamText, type UIMessage } from "ai"
+import { Groq } from "groq-sdk";
 
-export const maxDuration = 30
+export const maxDuration = 30;
 
 const CBT_SYSTEM_PROMPT = `You are Serenica, an empathetic AI mental health companion trained in Cognitive Behavioral Therapy (CBT) principles. Your role is to help users reframe negative thoughts and develop healthier thinking patterns.
 
@@ -18,28 +18,94 @@ When responding:
 - Help them examine the evidence for and against their thoughts
 - Suggest alternative, more balanced perspectives
 - Encourage small, manageable behavioral changes
-- Use gentle, conversational language`
+- Use gentle, conversational language
+
+Important safety guidelines:
+- If a user expresses self-harm or suicide thoughts, respond with compassion and encourage them to seek immediate professional help
+- Maintain appropriate boundaries and professional tone
+- Never diagnose or provide medical advice`;
 
 export async function POST(req: Request) {
-  const { messages }: { messages: UIMessage[] } = await req.json()
+  try {
+    const { messages } = await req.json();
 
-  const prompt = convertToModelMessages(messages)
+    if (!process.env.GROQ_API_KEY) {
+      throw new Error("GROQ_API_KEY is not configured");
+    }
 
-  const result = streamText({
-    model: "openai/gpt-4-mini",
-    system: CBT_SYSTEM_PROMPT,
-    messages: prompt,
-    abortSignal: req.signal,
-    temperature: 0.7,
-    maxOutputTokens: 1000,
-  })
+    // Initialize Groq client
+    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-  return result.toUIMessageStreamResponse({
-    onFinish: async ({ isAborted }) => {
-      if (isAborted) {
-        console.log("[v0] Chat stream aborted")
+    // Prepare Groq messages
+    const groqMessages: Array<{
+      role: "system" | "user" | "assistant";
+      content: string;
+    }> = [];
+
+    // Add CBT system prompt first
+    groqMessages.push({
+      role: "system",
+      content: CBT_SYSTEM_PROMPT,
+    });
+
+    // Convert user/assistant messages from request
+    for (const msg of messages) {
+      const content = msg.content;
+      const role = msg.role as "user" | "assistant";
+      
+      if (content && role) {
+        groqMessages.push({ role, content });
       }
-    },
-    consumeSseStream: consumeStream,
-  })
+    }
+
+
+    // Create chat completion with improved params
+    const chatCompletion = await groq.chat.completions.create({
+      messages: groqMessages,
+      model: "llama-3.3-70b-versatile",
+      temperature: 0.9,
+      max_completion_tokens: 8192,
+      top_p: 1,
+      stream: true,
+    });
+
+    // Stream Groq response back in real-time
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+      async start(controller) {
+        try {
+          for await (const chunk of chatCompletion) {
+            const content = chunk.choices[0]?.delta?.content || "";
+            if (content) {
+              // Send plain text chunks
+              controller.enqueue(encoder.encode(content));
+            }
+          }
+          controller.close();
+        } catch (error) {
+          console.error("Streaming error:", error);
+          controller.error(error);
+        }
+      },
+    });
+
+    return new Response(stream, {
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Transfer-Encoding": "chunked",
+      },
+    });
+  } catch (error) {
+    console.error("Chat API error:", error);
+    return new Response(
+      JSON.stringify({
+        error: "Failed to process chat request",
+        details: error instanceof Error ? error.message : "Unknown error",
+      }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+  }
 }
