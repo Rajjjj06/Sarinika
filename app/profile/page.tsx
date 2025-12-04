@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { DashboardNav } from "@/components/dashboard-nav"
-import { User, Mail, Bell, MessageSquare, Trash2, BookOpen, Clock, Download, Upload, Key } from "lucide-react"
+import { User, Mail, Bell, MessageSquare, Trash2, BookOpen, Clock } from "lucide-react"
 import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
@@ -25,7 +25,7 @@ import {
   getDoc,
 } from "firebase/firestore"
 import { useRouter } from "next/navigation"
-import { decryptMessages, decryptMessage, exportEncryptionKey, importEncryptionKey, isStillEncrypted } from "@/lib/crypto"
+import { decryptMessages, decryptMessage, isStillEncrypted } from "@/lib/crypto"
 
 interface ChatHistory {
   id: string
@@ -71,10 +71,6 @@ export default function ProfilePage() {
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([])
   const [editingName, setEditingName] = useState<string | null>(null)
   const [newName, setNewName] = useState("")
-  const [exportedKey, setExportedKey] = useState<string>("")
-  const [importKeyValue, setImportKeyValue] = useState<string>("")
-  const [showImportInput, setShowImportInput] = useState(false)
-  const [keyActionLoading, setKeyActionLoading] = useState(false)
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -128,7 +124,6 @@ export default function ProfilePage() {
           const querySnapshot = await getDocs(q)
 
           const histories: ChatHistory[] = []
-          // Decrypt messages for each chat
           for (const docSnapshot of querySnapshot.docs) {
             const data = docSnapshot.data()
             const encryptedMessages = data.messages || []
@@ -394,151 +389,6 @@ export default function ProfilePage() {
               <p className="text-xs text-muted-foreground mt-1">Email is managed by Google authentication</p>
             </div>
 
-            {/* Encryption Key Backup & Restore */}
-            <div className="pt-6 border-t border-border">
-              <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-                <Key className="w-5 h-5" />
-                Encryption Key Backup
-              </h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Your data is encrypted with a key stored in your browser. If you clear your browser data,
-                you'll lose access to your encrypted messages and journal entries unless you have a backup.
-              </p>
-
-              {/* Export Key Section */}
-              <div className="space-y-3 mb-6">
-                <div className="flex items-center gap-3">
-                  <Button
-                    variant="outline"
-                    onClick={async () => {
-                      if (!user) return
-                      setKeyActionLoading(true)
-                      try {
-                        const key = await exportEncryptionKey(user.uid)
-                        setExportedKey(key)
-                        alert("Encryption key exported successfully! Please save it in a secure location.")
-                      } catch (error: any) {
-                        console.error("Error exporting key:", error)
-                        alert(`Failed to export key: ${error.message}`)
-                      } finally {
-                        setKeyActionLoading(false)
-                      }
-                    }}
-                    disabled={keyActionLoading}
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Export Encryption Key
-                  </Button>
-                </div>
-
-                {exportedKey && (
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-foreground">
-                      Your Encryption Key (save this securely):
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        value={exportedKey}
-                        readOnly
-                        className="font-mono text-xs bg-muted"
-                        onClick={(e) => (e.target as HTMLInputElement).select()}
-                      />
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          navigator.clipboard.writeText(exportedKey)
-                          alert("Key copied to clipboard!")
-                        }}
-                      >
-                        Copy
-                      </Button>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      ⚠️ Keep this key secure! Anyone with this key can decrypt your data.
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* Import Key Section */}
-              <div className="space-y-3 pt-4 border-t border-border">
-                <div className="flex items-center gap-3">
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowImportInput(!showImportInput)}
-                  >
-                    <Upload className="w-4 h-4 mr-2" />
-                    Restore Encryption Key
-                  </Button>
-                </div>
-
-                {showImportInput && (
-                  <div className="space-y-3">
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
-                        Paste your backup encryption key:
-                      </label>
-                      <Input
-                        type="text"
-                        value={importKeyValue}
-                        onChange={(e) => setImportKeyValue(e.target.value)}
-                        placeholder="Paste your encryption key here..."
-                        className="font-mono text-xs"
-                      />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        onClick={async () => {
-                          if (!user) return
-                          if (!importKeyValue.trim()) {
-                            alert("Please enter your encryption key")
-                            return
-                          }
-
-                          if (
-                            !confirm(
-                              "Warning: This will overwrite your current encryption key. " +
-                                "Make sure you have the correct key, or you may lose access to your data. Continue?"
-                            )
-                          ) {
-                            return
-                          }
-
-                          setKeyActionLoading(true)
-                          try {
-                            await importEncryptionKey(user.uid, importKeyValue.trim())
-                            alert("Encryption key restored successfully! You can now access your encrypted data.")
-                            setImportKeyValue("")
-                            setShowImportInput(false)
-                          } catch (error: any) {
-                            console.error("Error importing key:", error)
-                            alert(`Failed to import key: ${error.message}`)
-                          } finally {
-                            setKeyActionLoading(false)
-                          }
-                        }}
-                        disabled={keyActionLoading || !importKeyValue.trim()}
-                      >
-                        Restore Key
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        onClick={() => {
-                          setShowImportInput(false)
-                          setImportKeyValue("")
-                        }}
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Use this if you've cleared your browser data and need to restore access to your encrypted data.
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
           </div>
         </Card>
 

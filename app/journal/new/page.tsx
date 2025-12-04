@@ -10,8 +10,8 @@ import { Sparkles } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { collection, addDoc, serverTimestamp } from "firebase/firestore"
 import { db } from "@/lib/firebase"
-import { checkNotifications } from "@/lib/utils/check-notifications"
 import { encryptMessage } from "@/lib/crypto"
+import { checkNotifications } from "@/lib/utils/check-notifications"
 
 export default function NewJournalPage() {
   const router = useRouter()

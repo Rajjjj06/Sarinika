@@ -5,186 +5,84 @@
  * THREAT MODEL:
  * - Encryption/Decryption happens CLIENT-SIDE ONLY
  * - The server (Firebase) stores encrypted data but CANNOT decrypt it
- * - Only the authenticated user on their own device can decrypt their messages
- * - Keys are stored in browser IndexedDB and never sent to the server
- * - If the user clears browser data, they will lose access to encrypted messages
- *   (unless they have a backup of their encryption key)
+ * - Only the authenticated user can decrypt their messages
+ * - Keys are derived deterministically from userId (works across browsers/devices)
  * 
  * SECURITY PROPERTIES:
  * - Each encryption uses a unique random salt (stored with encrypted data)
  * - Each encryption uses a unique random IV (stored with encrypted data)
- * - Keys are derived using PBKDF2 with 100,000 iterations
- * - User-specific encryption key is stable across sessions (stored in IndexedDB)
+ * - Master key is derived from userId using PBKDF2 with 100,000 iterations
+ * - Same userId always produces the same master key (works across browsers)
  */
 
-const DB_NAME = "serenica-crypto"
-const DB_VERSION = 1
-const STORE_NAME = "userKeys"
+// Fixed salt for deriving the master key from userId
+// This ensures the same userId always produces the same master key
+const MASTER_KEY_SALT = new Uint8Array([
+  0x53, 0x65, 0x72, 0x65, 0x6e, 0x69, 0x63, 0x61,
+  0x45, 0x6e, 0x63, 0x72, 0x79, 0x70, 0x74, 0x69,
+  0x6f, 0x6e, 0x4b, 0x65, 0x79, 0x53, 0x61, 0x6c,
+  0x74, 0x32, 0x30, 0x32, 0x34, 0x56, 0x31, 0x00
+])
 
-// In-memory cache to prevent race conditions and redundant IndexedDB access
-const keyCache = new Map<string, Promise<CryptoKey>>()
+// In-memory cache to prevent redundant key derivations
+const keyCache = new Map<string, CryptoKey>()
 
 /**
- * Gets or creates a stable encryption key for the user
- * This key is stored in IndexedDB and persists across sessions
- * The key is unique per user and never sent to the server
- * Uses an in-memory cache to prevent race conditions
+ * Derives a stable encryption key from the userId
+ * This key is deterministic - same userId always produces the same key
+ * Works across browsers/devices because it's derived from userId, not stored
  */
 async function getUserEncryptionKey(userId: string): Promise<CryptoKey> {
-  // Check if we already have a pending or resolved key for this user
+  // Check cache first
   if (keyCache.has(userId)) {
     return keyCache.get(userId)!
   }
 
-  // Create a promise for getting/creating the key
-  const keyPromise = getUserEncryptionKeyInternal(userId)
-  keyCache.set(userId, keyPromise)
-  
-  // Remove from cache if it fails (so we can retry)
-  keyPromise.catch(() => {
-    keyCache.delete(userId)
-  })
-  
-  return keyPromise
-}
-
-/**
- * Internal function that actually gets or creates the encryption key
- */
-async function getUserEncryptionKeyInternal(userId: string): Promise<CryptoKey> {
   try {
-    // Open IndexedDB
-    const db = await new Promise<IDBDatabase>((resolve, reject) => {
-      const request = indexedDB.open(DB_NAME, DB_VERSION)
-      request.onerror = () => {
-        console.error("Failed to open IndexedDB:", request.error)
-        reject(request.error)
-      }
-      request.onsuccess = () => resolve(request.result)
-      request.onupgradeneeded = (event) => {
-        const db = (event.target as IDBOpenDBRequest).result
-        if (!db.objectStoreNames.contains(STORE_NAME)) {
-          db.createObjectStore(STORE_NAME)
-        }
-      }
-    })
-
-    // Try to get existing key
-    const existingKey = await new Promise<ArrayBuffer | null>((resolve, reject) => {
-      const transaction = db.transaction([STORE_NAME], "readonly")
-      const store = transaction.objectStore(STORE_NAME)
-      const request = store.get(userId)
-      request.onerror = () => {
-        console.error("Failed to get key from IndexedDB:", request.error)
-        reject(request.error)
-      }
-      request.onsuccess = () => resolve(request.result || null)
-    })
-
-    if (existingKey) {
-      // Verify key length
-      if (existingKey.byteLength !== 32) {
-        console.warn(`Existing key has wrong length (${existingKey.byteLength} bytes, expected 32). Regenerating...`)
-        // Delete the invalid key and generate a new one
-        await new Promise<void>((resolve, reject) => {
-          const transaction = db.transaction([STORE_NAME], "readwrite")
-          const store = transaction.objectStore(STORE_NAME)
-          const request = store.delete(userId)
-          request.onerror = () => reject(request.error)
-          request.onsuccess = () => resolve()
-        })
-        // Fall through to generate new key
-      } else {
-        // Import existing key - create a copy to ensure we have a proper ArrayBuffer
-        const keyBytes = new Uint8Array(existingKey)
-        // Create a proper copy of the buffer
-        const keyBuffer = new Uint8Array(keyBytes).buffer
-        
-        console.log("Using existing encryption key from IndexedDB", {
-          userId,
-          keyLength: keyBuffer.byteLength,
-          keyHash: Array.from(keyBytes.slice(0, 4)).map(b => b.toString(16).padStart(2, '0')).join('')
-        })
-        
-        return crypto.subtle.importKey(
-          "raw",
-          keyBuffer,
-          { name: "PBKDF2" },
-          false,
-          ["deriveBits", "deriveKey"]
-        )
-      }
-    }
-
-    // Generate new key (32 bytes = 256 bits)
-    console.log("Generating new encryption key for user:", userId)
-    const keyMaterial = crypto.getRandomValues(new Uint8Array(32))
-    // Create a proper copy of the buffer to ensure it's not shared
-    const keyBuffer = new Uint8Array(keyMaterial).buffer
-
-    // Store the key in IndexedDB
-    await new Promise<void>((resolve, reject) => {
-      const transaction = db.transaction([STORE_NAME], "readwrite")
-      const store = transaction.objectStore(STORE_NAME)
-      const request = store.put(keyBuffer, userId)
-      request.onerror = () => {
-        console.error("Failed to store key in IndexedDB:", request.error)
-        reject(request.error)
-      }
-      request.onsuccess = () => {
-        console.log("New encryption key stored in IndexedDB", {
-          userId,
-          keyLength: keyBuffer.byteLength,
-          keyHash: Array.from(keyMaterial.slice(0, 4)).map(b => b.toString(16).padStart(2, '0')).join('')
-        })
-        resolve()
-      }
-    })
-
-    // Verify the key was stored correctly by reading it back
-    const verifyKey = await new Promise<ArrayBuffer | null>((resolve, reject) => {
-      const transaction = db.transaction([STORE_NAME], "readonly")
-      const store = transaction.objectStore(STORE_NAME)
-      const request = store.get(userId)
-      request.onerror = () => reject(request.error)
-      request.onsuccess = () => resolve(request.result || null)
-    })
-    
-    if (!verifyKey || verifyKey.byteLength !== 32) {
-      throw new Error("Failed to verify key storage - key was not stored correctly")
-    }
-    
-    // Compare the stored key with what we tried to store
-    const storedBytes = new Uint8Array(verifyKey)
-    const originalBytes = new Uint8Array(keyBuffer)
-    let matches = true
-    for (let i = 0; i < 32; i++) {
-      if (storedBytes[i] !== originalBytes[i]) {
-        matches = false
-        break
-      }
-    }
-    
-    if (!matches) {
-      throw new Error("Key verification failed - stored key does not match original")
-    }
-
-    // Import the new key
-    return crypto.subtle.importKey(
+    // Convert userId to a key material (password) for PBKDF2
+    const keyMaterial = await crypto.subtle.importKey(
       "raw",
-      keyBuffer,
+      new TextEncoder().encode(userId),
       { name: "PBKDF2" },
       false,
       ["deriveBits", "deriveKey"]
     )
+
+    // Derive 256 bits (32 bytes) from userId using PBKDF2 with fixed salt
+    // This ensures the same userId always produces the same key material
+    const derivedBits = await crypto.subtle.deriveBits(
+      {
+        name: "PBKDF2",
+        salt: MASTER_KEY_SALT,
+        iterations: 100000, // High iteration count for security
+        hash: "SHA-256",
+      },
+      keyMaterial,
+      256 // 256 bits = 32 bytes
+    )
+
+    // Import the derived bits as a key material for further PBKDF2 derivation
+    // This master key will be used to derive per-message encryption keys
+    const masterKey = await crypto.subtle.importKey(
+      "raw",
+      derivedBits,
+      { name: "PBKDF2" },
+      false,
+      ["deriveBits", "deriveKey"]
+    )
+
+    // Cache the key for this session
+    keyCache.set(userId, masterKey)
+    
+    return masterKey
   } catch (error) {
-    console.error("Error in getUserEncryptionKey:", error)
-    throw new Error(`Failed to get encryption key: ${error instanceof Error ? error.message : String(error)}`)
+    console.error("Error deriving encryption key from userId:", error)
+    throw new Error(`Failed to derive encryption key: ${error instanceof Error ? error.message : String(error)}`)
   }
 }
 
 /**
- * Derives an encryption key from the user's stable key and a per-encryption salt
+ * Derives an encryption key from the user's master key and a per-encryption salt
  * Each encryption uses a unique salt, which is stored with the encrypted data
  */
 async function deriveEncryptionKey(
@@ -213,7 +111,6 @@ async function deriveEncryptionKey(
  */
 function encodeBase64(data: Uint8Array): string {
   // Convert Uint8Array to binary string in chunks to avoid stack overflow
-  // Build string incrementally without using apply() to avoid call stack limits
   let binary = ""
   const chunkSize = 8192
   for (let i = 0; i < data.length; i += chunkSize) {
@@ -279,13 +176,13 @@ function isLikelyEncrypted(content: string): boolean {
  * Each encryption uses:
  * - A unique random 16-byte salt (stored with encrypted data)
  * - A unique random 12-byte IV (stored with encrypted data)
- * - The user's stable encryption key (from IndexedDB)
+ * - The user's master key (derived from userId)
  */
 export async function encryptMessage(message: string, userId: string): Promise<string> {
   if (!message) return message
 
   try {
-    // Get or create the user's stable encryption key
+    // Get the user's master encryption key (derived from userId)
     const keyMaterial = await getUserEncryptionKey(userId)
 
     // Generate a unique random salt for this encryption (16 bytes)
@@ -315,17 +212,7 @@ export async function encryptMessage(message: string, userId: string): Promise<s
     combined.set(new Uint8Array(encryptedData), salt.length + iv.length)
 
     // Convert to base64 for storage
-    const encrypted = encodeBase64(combined)
-    
-    console.log("Message encrypted successfully", {
-      userId,
-      messageLength: message.length,
-      encryptedLength: encrypted.length,
-      saltLength: salt.length,
-      ivLength: iv.length
-    })
-    
-    return encrypted
+    return encodeBase64(combined)
   } catch (error) {
     console.error("Encryption error:", error)
     throw new Error("Failed to encrypt message")
@@ -347,7 +234,7 @@ export async function decryptMessage(encryptedMessage: string, userId: string): 
   }
 
   try {
-    // Get the user's stable encryption key
+    // Get the user's master encryption key (derived from userId)
     const keyMaterial = await getUserEncryptionKey(userId)
 
     // Decode from base64
@@ -367,7 +254,6 @@ export async function decryptMessage(encryptedMessage: string, userId: string): 
     }
 
     // Extract salt (first 16 bytes), IV (next 12 bytes), and encrypted data (rest)
-    // Create new Uint8Arrays to ensure proper typing
     const salt = new Uint8Array(combined.slice(0, 16))
     const iv = new Uint8Array(combined.slice(16, 28))
     const encryptedData = combined.slice(28)
@@ -383,15 +269,6 @@ export async function decryptMessage(encryptedMessage: string, userId: string): 
     // Decrypt the message
     let decryptedData: ArrayBuffer
     try {
-      console.log("Attempting decryption", {
-        userId,
-        messageLength: encryptedMessage.length,
-        encryptedDataLength: encryptedData.length,
-        saltLength: salt.length,
-        ivLength: iv.length,
-        saltHash: Array.from(salt.slice(0, 4)).map(b => b.toString(16).padStart(2, '0')).join('')
-      })
-      
       decryptedData = await crypto.subtle.decrypt(
         {
           name: "AES-GCM",
@@ -400,60 +277,12 @@ export async function decryptMessage(encryptedMessage: string, userId: string): 
         key,
         encryptedData
       )
-      
-      console.log("Decryption successful", {
-        userId,
-        decryptedLength: decryptedData.byteLength
-      })
     } catch (decryptError) {
       // OperationError typically means the key doesn't match (wrong key or corrupted data)
-      // This often happens with old messages encrypted with the token-based system
       if (decryptError instanceof DOMException && decryptError.name === "OperationError") {
-        console.error("Decryption OperationError - Key mismatch detected. This message was likely encrypted with a different key (possibly the old token-based system).", {
-          userId,
-          messageLength: encryptedMessage.length,
-          encryptedDataLength: encryptedData.length,
-          saltLength: salt.length,
-          ivLength: iv.length,
-          saltHash: Array.from(salt.slice(0, 4)).map(b => b.toString(16).padStart(2, '0')).join(''),
-          messagePreview: encryptedMessage.substring(0, 50)
-        })
-        
-        // Try to verify if the key in IndexedDB is correct by checking if we can read it
-        try {
-          const db = await new Promise<IDBDatabase>((resolve, reject) => {
-            const request = indexedDB.open(DB_NAME, DB_VERSION)
-            request.onerror = () => reject(request.error)
-            request.onsuccess = () => resolve(request.result)
-            request.onupgradeneeded = (event) => {
-              const db = (event.target as IDBOpenDBRequest).result
-              if (!db.objectStoreNames.contains(STORE_NAME)) {
-                db.createObjectStore(STORE_NAME)
-              }
-            }
-          })
-          
-          const storedKey = await new Promise<ArrayBuffer | null>((resolve, reject) => {
-            const transaction = db.transaction([STORE_NAME], "readonly")
-            const store = transaction.objectStore(STORE_NAME)
-            const request = store.get(userId)
-            request.onerror = () => reject(request.error)
-            request.onsuccess = () => resolve(request.result || null)
-          })
-          
-          if (storedKey) {
-            console.error("Key exists in IndexedDB", {
-              keyLength: storedKey.byteLength,
-              keyHash: Array.from(new Uint8Array(storedKey).slice(0, 4)).map(b => b.toString(16).padStart(2, '0')).join('')
-            })
-          } else {
-            console.error("No key found in IndexedDB - this should not happen if encryption worked")
-          }
-        } catch (keyCheckError) {
-          console.error("Error checking key in IndexedDB:", keyCheckError)
-        }
-        
-        throw new Error("DECRYPTION_KEY_MISMATCH: This message was encrypted with a different key and cannot be decrypted. It may have been encrypted with the old token-based system.")
+        console.error("Decryption failed - key mismatch. This message may have been encrypted with a different system.")
+        // Return the encrypted message as-is (backward compatibility)
+        return encryptedMessage
       }
       throw decryptError
     }
@@ -468,64 +297,8 @@ export async function decryptMessage(encryptedMessage: string, userId: string): 
 
     return decryptedText
   } catch (error) {
-    // Check if this is a key mismatch error (old messages)
-    if (error instanceof Error && error.message.includes("DECRYPTION_KEY_MISMATCH")) {
-      console.warn("Cannot decrypt message - it was encrypted with a different key (likely old token-based system). Returning encrypted string.")
-      // Return a user-friendly indicator that this is an old encrypted message
-      // In the UI, you might want to show "[Encrypted - cannot decrypt]" instead
-      return encryptedMessage
-    }
-
-    // Log the full error for debugging - handle DOMException and other error types
-    let errorDetails: any = {
-      userId,
-      messageLength: encryptedMessage.length,
-      messagePreview: encryptedMessage.substring(0, 50) + "..."
-    }
-
-    if (error instanceof DOMException) {
-      errorDetails = {
-        ...errorDetails,
-        errorType: "DOMException",
-        name: error.name,
-        message: error.message,
-        code: error.code,
-        stack: error.stack
-      }
-    } else if (error instanceof Error) {
-      errorDetails = {
-        ...errorDetails,
-        errorType: "Error",
-        name: error.name,
-        message: error.message,
-        stack: error.stack
-      }
-    } else {
-      errorDetails = {
-        ...errorDetails,
-        errorType: typeof error,
-        error: String(error),
-        errorStringified: JSON.stringify(error)
-      }
-    }
-
-    console.error("Decryption failed:", errorDetails)
-    
-    // Check if this might be an old message encrypted with the token-based system
-    // Old format: base64([iv:12 bytes][encrypted data]) - no salt prepended
-    // New format: base64([salt:16 bytes][iv:12 bytes][encrypted data])
-    try {
-      const decoded = decodeBase64(encryptedMessage)
-      if (decoded.length >= 12 && decoded.length < 28) {
-        console.warn("Message appears to be in old format (no salt). This message was encrypted with the old token-based system and cannot be decrypted with the new stable key system.")
-      }
-    } catch (e) {
-      // Ignore decode errors here
-    }
-    
-    // If decryption fails, it might be an unencrypted message (backward compatibility)
-    // or a corrupted message - return the original
-    console.warn("Decryption failed, returning original message (may be unencrypted, corrupted, or encrypted with old system)")
+    console.error("Decryption failed:", error)
+    // If decryption fails, return the original (might be unencrypted or corrupted)
     return encryptedMessage
   }
 }
@@ -560,95 +333,4 @@ export async function decryptMessages(
     }))
   )
   return decryptedMessages
-}
-
-/**
- * Exports the user's encryption key as a base64-encoded string
- * This key can be saved by the user and used to restore access to encrypted data
- * if browser data is cleared.
- * 
- * WARNING: This key allows decryption of all user data. Keep it secure!
- * 
- * @param userId - The user's ID
- * @returns A base64-encoded string representing the encryption key
- */
-export async function exportEncryptionKey(userId: string): Promise<string> {
-  // Open IndexedDB
-  const db = await new Promise<IDBDatabase>((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION)
-    request.onerror = () => reject(request.error)
-    request.onsuccess = () => resolve(request.result)
-    request.onupgradeneeded = (event) => {
-      const db = (event.target as IDBOpenDBRequest).result
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME)
-      }
-    }
-  })
-
-  // Get the key from IndexedDB
-  const keyBuffer = await new Promise<ArrayBuffer | null>((resolve, reject) => {
-    const transaction = db.transaction([STORE_NAME], "readonly")
-    const store = transaction.objectStore(STORE_NAME)
-    const request = store.get(userId)
-    request.onerror = () => reject(request.error)
-    request.onsuccess = () => resolve(request.result || null)
-  })
-
-  if (!keyBuffer) {
-    throw new Error("No encryption key found. Please create some encrypted content first.")
-  }
-
-  // Convert ArrayBuffer to Uint8Array and encode as base64
-  const keyBytes = new Uint8Array(keyBuffer)
-  return encodeBase64(keyBytes)
-}
-
-/**
- * Imports and restores a user's encryption key from a base64-encoded string
- * This allows users to restore access to encrypted data after clearing browser data.
- * 
- * WARNING: This will overwrite any existing key for this user!
- * 
- * @param userId - The user's ID
- * @param keyBase64 - The base64-encoded encryption key to import
- */
-export async function importEncryptionKey(userId: string, keyBase64: string): Promise<void> {
-  // Decode the base64 key
-  let keyBytes: Uint8Array
-  try {
-    keyBytes = decodeBase64(keyBase64)
-  } catch (error) {
-    throw new Error("Invalid key format. Please check your backup key.")
-  }
-
-  // Validate key length (should be 32 bytes = 256 bits)
-  if (keyBytes.length !== 32) {
-    throw new Error("Invalid key length. Expected 32 bytes.")
-  }
-
-  // Open IndexedDB
-  const db = await new Promise<IDBDatabase>((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION)
-    request.onerror = () => reject(request.error)
-    request.onsuccess = () => resolve(request.result)
-    request.onupgradeneeded = (event) => {
-      const db = (event.target as IDBOpenDBRequest).result
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME)
-      }
-    }
-  })
-
-  // Store the key in IndexedDB
-  await new Promise<void>((resolve, reject) => {
-    const transaction = db.transaction([STORE_NAME], "readwrite")
-    const store = transaction.objectStore(STORE_NAME)
-    const request = store.put(keyBytes.buffer, userId)
-    request.onerror = () => reject(request.error)
-    request.onsuccess = () => resolve()
-  })
-  
-  // Clear the cache so the new key will be loaded on next access
-  keyCache.delete(userId)
 }

@@ -92,7 +92,7 @@ export default function AboutPage() {
           <div className="space-y-4">
             {[
               "AI-powered insights that understand your emotional patterns",
-              "Private and secure journaling with end-to-end encryption",
+              "Private and secure journaling",
               "Personalized recommendations based on your wellness data",
               "Beautiful, calming interface designed for mindfulness",
               "Track your progress and celebrate your growth",

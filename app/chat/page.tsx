@@ -93,9 +93,7 @@ export default function ChatPage() {
             }
             
             const parsed = JSON.parse(savedMessages)
-            // Messages in localStorage are unencrypted (for quick access)
-            // But if they came from Firestore, they might be encrypted
-            // Try to decrypt them (will return original if not encrypted)
+            // Messages in localStorage might be encrypted, try to decrypt them
             const decryptedMessages = await decryptMessages(parsed, user.uid)
             setMessages(decryptedMessages as Message[])
             setCurrentChatId(savedChatId)
@@ -137,21 +135,16 @@ export default function ChatPage() {
         }
 
         // Encrypt messages before saving to Firestore
-        console.log("Encrypting messages for Firestore...", { messageCount: messages.length })
         const encryptedMessages = await encryptMessages(messages, user.uid)
-        console.log("Messages encrypted successfully")
 
         if (currentChatId) {
           // Update existing chat - don't change the name
-          console.log("Updating existing chat in Firestore:", currentChatId)
           await updateDoc(doc(db, "chats", currentChatId), {
             messages: encryptedMessages,
             updatedAt: serverTimestamp(),
           })
-          console.log("Chat updated successfully in Firestore")
         } else {
           // Create new chat with auto-generated ID and smart name
-          console.log("Creating new chat in Firestore...")
           const newChatRef = doc(collection(db, "chats"))
           await setDoc(newChatRef, {
             userId: user.uid,
@@ -159,11 +152,6 @@ export default function ChatPage() {
             messages: encryptedMessages,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
-          })
-          console.log("New chat created in Firestore:", newChatRef.id, {
-            userId: user.uid,
-            name: chatName,
-            messageCount: encryptedMessages.length
           })
           setCurrentChatId(newChatRef.id)
           localStorage.setItem("serenica_current_chat_id", newChatRef.id)
@@ -179,7 +167,7 @@ export default function ChatPage() {
           }
         }
 
-        // Also save to localStorage for quick access (unencrypted for performance)
+        // Also save to localStorage for quick access
         // Note: localStorage is less secure but faster for quick access
         localStorage.setItem(STORAGE_KEY, JSON.stringify(messages))
         localStorage.setItem("serenica_user_id", user.uid)
@@ -411,7 +399,7 @@ export default function ChatPage() {
                     {isStillEncrypted(message.content) ? (
                       <div className="text-sm">
                         <p className="text-muted-foreground/70 italic mb-1">
-                          ⚠️ This message was encrypted with an old system and cannot be decrypted.
+                          ⚠️ This message could not be decrypted.
                         </p>
                         <p className="text-xs text-muted-foreground/50 font-mono break-all">
                           {message.content.substring(0, 100)}...
