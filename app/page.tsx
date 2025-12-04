@@ -51,40 +51,48 @@ export default function Home() {
   const [isScrolled, setIsScrolled] = useState(false)
   const { user } = useAuth()
 
+  // Inject structured data after hydration to avoid mismatch
+  useEffect(() => {
+    const script = document.createElement("script")
+    script.type = "application/ld+json"
+    script.text = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Serenica",
+      "description": "AI-powered mental health companion for mindfulness and self-reflection",
+      "url": window.location.origin,
+      "applicationCategory": "HealthApplication",
+      "operatingSystem": "Web",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.8",
+        "ratingCount": "1000"
+      },
+      "featureList": [
+        "AI-powered emotional insights",
+        "Secure journaling",
+        "Mood tracking",
+        "Progress visualization",
+        "Personalized recommendations"
+      ]
+    })
+    document.head.appendChild(script)
+
+    return () => {
+      // Cleanup: remove script on unmount
+      if (script.parentNode) {
+        script.parentNode.removeChild(script)
+      }
+    }
+  }, [])
+
   return (
     <>
-      {/* Structured Data for SEO */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "WebApplication",
-            "name": "Serenica",
-            "description": "AI-powered mental health companion for mindfulness and self-reflection",
-            "url": typeof window !== "undefined" ? window.location.origin : "https://serenica.app",
-            "applicationCategory": "HealthApplication",
-            "operatingSystem": "Web",
-            "offers": {
-              "@type": "Offer",
-              "price": "0",
-              "priceCurrency": "USD"
-            },
-            "aggregateRating": {
-              "@type": "AggregateRating",
-              "ratingValue": "4.8",
-              "ratingCount": "1000"
-            },
-            "featureList": [
-              "AI-powered emotional insights",
-              "Secure journaling",
-              "Mood tracking",
-              "Progress visualization",
-              "Personalized recommendations"
-            ]
-          })
-        }}
-      />
       <div className="min-h-screen gradient-bg-soft">
         <Navbar />
 
