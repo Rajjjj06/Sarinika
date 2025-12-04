@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -8,30 +9,36 @@ import { Footer } from "@/components/footer"
 import { CheckCircle, Users, Lightbulb } from "lucide-react"
 
 export default function AboutPage() {
+  useEffect(() => {
+    // Inject structured data after hydration to avoid mismatch
+    const script = document.createElement("script")
+    script.type = "application/ld+json"
+    script.text = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Serenica",
+      "description": "AI-powered mental health companion for mindfulness and self-reflection",
+      "url": window.location.origin,
+      "logo": `${window.location.origin}/placeholder-logo.png`,
+      "sameAs": [],
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "contactType": "Customer Service",
+        "availableLanguage": "English"
+      }
+    })
+    document.head.appendChild(script)
+
+    return () => {
+      // Cleanup: remove script on unmount
+      if (script.parentNode) {
+        script.parentNode.removeChild(script)
+      }
+    }
+  }, [])
+
   return (
     <>
-      {/* Structured Data for SEO */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "Organization",
-            "name": "Serenica",
-            "description": "AI-powered mental health companion for mindfulness and self-reflection",
-            "url": typeof window !== "undefined" ? window.location.origin : "https://serenica.app",
-            "logo": typeof window !== "undefined" ? `${window.location.origin}/placeholder-logo.png` : "https://serenica.app/placeholder-logo.png",
-            "sameAs": [
-              // Add social media links when available
-            ],
-            "contactPoint": {
-              "@type": "ContactPoint",
-              "contactType": "Customer Service",
-              "availableLanguage": "English"
-            }
-          })
-        }}
-      />
       <div className="min-h-screen gradient-bg-soft">
         <Navbar />
 
@@ -113,5 +120,6 @@ export default function AboutPage() {
 
       <Footer />
     </div>
+    </>
   )
 }
