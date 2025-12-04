@@ -886,7 +886,7 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          <Button className="mt-6" onClick={handleSave} disabled={!hasNotificationChanges}>
+          <Button className="mt-6" onClick={handleSave}>
             Save Notification Preferences
           </Button>
         </Card>
