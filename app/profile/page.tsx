@@ -1,11 +1,15 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { DashboardNav } from "@/components/dashboard-nav"
-import { User, Mail, Bell, MessageSquare, Trash2, BookOpen } from "lucide-react"
+import { User, Mail, Bell, MessageSquare, Trash2, BookOpen, Clock } from "lucide-react"
+import { Switch } from "@/components/ui/switch"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Label } from "@/components/ui/label"
+import { NotificationPreferences, DEFAULT_NOTIFICATION_PREFERENCES } from "@/lib/types/notifications"
 import { useAuth } from "@/contexts/auth-context"
 import { db } from "@/lib/firebase"
 import {
@@ -17,8 +21,11 @@ import {
   doc,
   serverTimestamp,
   updateDoc,
+  setDoc,
+  getDoc,
 } from "firebase/firestore"
 import { useRouter } from "next/navigation"
+import { decryptMessages, decryptMessage } from "@/lib/crypto"
 
 interface ChatHistory {
   id: string
@@ -52,10 +59,14 @@ export default function ProfilePage() {
   })
   const [loading, setLoading] = useState(true)
   const [notifications, setNotifications] = useState({
-    dailyReminder: true,
-    weeklyInsights: true,
-    milestones: true,
+    dailyReminder: { enabled: true, time: "09:00", channel: "both" as const },
+    weeklyInsights: { enabled: true, day: "monday" as const, time: "10:00", channel: "in_app" as const },
+    milestones: { enabled: true, channel: "both" as const },
+    streakWarnings: { enabled: true, time: "20:00", channel: "both" as const },
+    moodAlerts: { enabled: true, threshold: 4, channel: "both" as const },
+    quietHours: { enabled: false, start: "22:00", end: "08:00" },
   })
+  const [savedNotifications, setSavedNotifications] = useState<typeof notifications | null>(null)
   const [chatHistories, setChatHistories] = useState<ChatHistory[]>([])
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([])
   const [editingName, setEditingName] = useState<string | null>(null)
@@ -79,22 +90,54 @@ export default function ProfilePage() {
             photoURL: user.photoURL || "",
           })
 
+          // Load notification preferences directly from Firestore
+          try {
+            const prefsRef = doc(db, "notificationPreferences", user.uid)
+            const prefsSnap = await getDoc(prefsRef)
+            if (prefsSnap.exists()) {
+              const data = prefsSnap.data() as typeof notifications
+              // Remove any extra fields like updatedAt that might be in Firestore
+              const cleanData = {
+                dailyReminder: data.dailyReminder || notifications.dailyReminder,
+                weeklyInsights: data.weeklyInsights || notifications.weeklyInsights,
+                milestones: data.milestones || notifications.milestones,
+                streakWarnings: data.streakWarnings || notifications.streakWarnings,
+                moodAlerts: data.moodAlerts || notifications.moodAlerts,
+                quietHours: data.quietHours || notifications.quietHours,
+              }
+              setNotifications(cleanData)
+              // Store a deep copy of the saved state
+              setSavedNotifications(JSON.parse(JSON.stringify(cleanData)))
+            } else {
+              // If no preferences exist, use defaults and mark as saved
+              setSavedNotifications(JSON.parse(JSON.stringify(notifications)))
+            }
+          } catch (error) {
+            console.error("Error loading notification preferences:", error)
+            // On error, mark current state as saved to prevent save button from being enabled
+            setSavedNotifications(JSON.parse(JSON.stringify(notifications)))
+          }
+
           // Load chat histories from Firestore
           const chatsRef = collection(db, "chats")
           const q = query(chatsRef, where("userId", "==", user.uid))
           const querySnapshot = await getDocs(q)
 
           const histories: ChatHistory[] = []
-          querySnapshot.forEach((docSnapshot) => {
+          // Decrypt messages for each chat
+          for (const docSnapshot of querySnapshot.docs) {
             const data = docSnapshot.data()
+            const encryptedMessages = data.messages || []
+            // Decrypt messages when loading from Firestore
+            const decryptedMessages = await decryptMessages(encryptedMessages, user.uid)
             histories.push({
               id: docSnapshot.id,
               name: data.name || "Untitled Chat",
-              messages: data.messages || [],
+              messages: decryptedMessages,
               createdAt: data.createdAt,
               updatedAt: data.updatedAt,
             })
-          })
+          }
 
           // Sort by updatedAt descending
           histories.sort((a, b) => {
@@ -111,17 +154,19 @@ export default function ProfilePage() {
           const journalsSnapshot = await getDocs(journalsQuery)
 
           const entries: JournalEntry[] = []
-          journalsSnapshot.forEach((docSnapshot) => {
+          for (const docSnapshot of journalsSnapshot.docs) {
             const data = docSnapshot.data()
+            // Decrypt the journal content
+            const decryptedContent = await decryptMessage(data.content || "", user.uid)
             entries.push({
               id: docSnapshot.id,
-              content: data.content || "",
+              content: decryptedContent,
               emotion: data.emotion || "Thoughtful",
               mentalState: data.mentalState || "Reflective",
               createdAt: data.createdAt,
               updatedAt: data.updatedAt,
             })
-          })
+          }
 
           // Sort by createdAt descending (newest first)
           entries.sort((a, b) => {
@@ -143,7 +188,40 @@ export default function ProfilePage() {
   }, [user])
 
   const handleSave = async () => {
-    alert("Profile updated successfully!")
+    if (!user) return
+    
+    try {
+      // Save notification preferences directly to Firestore (client-side has auth context)
+      const prefsRef = doc(db, "notificationPreferences", user.uid)
+      await setDoc(
+        prefsRef,
+        {
+          ...notifications,
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      )
+
+      // Update saved state to match current state (deep copy)
+      setSavedNotifications(JSON.parse(JSON.stringify(notifications)))
+      alert("Notification preferences saved successfully!")
+    } catch (error) {
+      console.error("Error saving preferences:", error)
+      alert("Failed to save notification preferences. Please try again.")
+    }
+  }
+
+  // Check if notifications have changed (memoized to react to changes)
+  const hasNotificationChanges = useMemo(() => {
+    if (savedNotifications === null) return false
+    return JSON.stringify(notifications) !== JSON.stringify(savedNotifications)
+  }, [notifications, savedNotifications])
+
+  const updateNotificationPreference = (key: string, value: any) => {
+    setNotifications((prev) => ({
+      ...prev,
+      [key]: { ...prev[key as keyof typeof prev], ...value },
+    }))
   }
 
   const handleDeleteHistory = async (id: string) => {
@@ -180,9 +258,11 @@ export default function ProfilePage() {
   }
 
   const handleContinueChat = (history: ChatHistory) => {
+    if (!user) return
     // Store chat ID in localStorage for the chat page to load
     localStorage.setItem("serenica_chat_id", history.id)
     localStorage.setItem("serenica_chat_history", JSON.stringify(history.messages))
+    localStorage.setItem("serenica_user_id", user.uid)
     router.push("/chat")
   }
 
@@ -451,31 +531,214 @@ export default function ProfilePage() {
             Notifications
           </h2>
 
-          <div className="space-y-4">
-            {[
-              { key: "dailyReminder", label: "Daily Reminder", desc: "Get reminded to journal daily" },
-              { key: "weeklyInsights", label: "Weekly Insights", desc: "Receive weekly wellness insights" },
-              { key: "milestones", label: "Milestones", desc: "Celebrate your achievements" },
-            ].map((item) => (
-              <div key={item.key} className="flex items-center justify-between p-4 border border-border rounded-lg">
+          <div className="space-y-6">
+            {/* Daily Reminder */}
+            <div className="p-4 border border-border rounded-lg space-y-3">
+              <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-foreground">{item.label}</p>
-                  <p className="text-sm text-muted-foreground">{item.desc}</p>
+                  <p className="font-medium text-foreground">Daily Reminder</p>
+                  <p className="text-sm text-muted-foreground">Get reminded to journal daily</p>
                 </div>
-                <input
-                  type="checkbox"
-                  checked={notifications[item.key as keyof typeof notifications]}
-                  onChange={(e) =>
-                    setNotifications({
-                      ...notifications,
-                      [item.key]: e.target.checked,
-                    })
+                <Switch
+                  checked={notifications.dailyReminder.enabled}
+                  onCheckedChange={(checked) =>
+                    updateNotificationPreference("dailyReminder", { enabled: checked })
                   }
-                  className="w-5 h-5 rounded"
                 />
               </div>
-            ))}
+              {notifications.dailyReminder.enabled && (
+                <div className="flex items-center gap-3 pl-4">
+                  <Label className="text-sm flex items-center gap-2">
+                    <Clock className="w-4 h-4" />
+                    Time:
+                  </Label>
+                  <Input
+                    type="time"
+                    value={notifications.dailyReminder.time}
+                    onChange={(e) =>
+                      updateNotificationPreference("dailyReminder", { time: e.target.value })
+                    }
+                    className="w-32"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Weekly Insights */}
+            <div className="p-4 border border-border rounded-lg space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium text-foreground">Weekly Insights</p>
+                  <p className="text-sm text-muted-foreground">Receive weekly wellness insights</p>
+                </div>
+                <Switch
+                  checked={notifications.weeklyInsights.enabled}
+                  onCheckedChange={(checked) =>
+                    updateNotificationPreference("weeklyInsights", { enabled: checked })
+                  }
+                />
+              </div>
+              {notifications.weeklyInsights.enabled && (
+                <div className="flex items-center gap-3 pl-4 flex-wrap">
+                  <Label className="text-sm">Day:</Label>
+                  <Select
+                    value={notifications.weeklyInsights.day}
+                    onValueChange={(value: any) =>
+                      updateNotificationPreference("weeklyInsights", { day: value })
+                    }
+                  >
+                    <SelectTrigger className="w-32">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="monday">Monday</SelectItem>
+                      <SelectItem value="tuesday">Tuesday</SelectItem>
+                      <SelectItem value="wednesday">Wednesday</SelectItem>
+                      <SelectItem value="thursday">Thursday</SelectItem>
+                      <SelectItem value="friday">Friday</SelectItem>
+                      <SelectItem value="saturday">Saturday</SelectItem>
+                      <SelectItem value="sunday">Sunday</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Label className="text-sm flex items-center gap-2">
+                    <Clock className="w-4 h-4" />
+                    Time:
+                  </Label>
+                  <Input
+                    type="time"
+                    value={notifications.weeklyInsights.time}
+                    onChange={(e) =>
+                      updateNotificationPreference("weeklyInsights", { time: e.target.value })
+                    }
+                    className="w-32"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Milestones */}
+            <div className="p-4 border border-border rounded-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium text-foreground">Milestones</p>
+                  <p className="text-sm text-muted-foreground">Celebrate your achievements</p>
+                </div>
+                <Switch
+                  checked={notifications.milestones.enabled}
+                  onCheckedChange={(checked) =>
+                    updateNotificationPreference("milestones", { enabled: checked })
+                  }
+                />
+              </div>
+            </div>
+
+            {/* Streak Warnings */}
+            <div className="p-4 border border-border rounded-lg space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium text-foreground">Streak Warnings</p>
+                  <p className="text-sm text-muted-foreground">Get warned if you're about to break your streak</p>
+                </div>
+                <Switch
+                  checked={notifications.streakWarnings.enabled}
+                  onCheckedChange={(checked) =>
+                    updateNotificationPreference("streakWarnings", { enabled: checked })
+                  }
+                />
+              </div>
+              {notifications.streakWarnings.enabled && (
+                <div className="flex items-center gap-3 pl-4">
+                  <Label className="text-sm flex items-center gap-2">
+                    <Clock className="w-4 h-4" />
+                    Warning Time:
+                  </Label>
+                  <Input
+                    type="time"
+                    value={notifications.streakWarnings.time}
+                    onChange={(e) =>
+                      updateNotificationPreference("streakWarnings", { time: e.target.value })
+                    }
+                    className="w-32"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Mood Alerts */}
+            <div className="p-4 border border-border rounded-lg space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium text-foreground">Mood Alerts</p>
+                  <p className="text-sm text-muted-foreground">Get notified when your mood is low</p>
+                </div>
+                <Switch
+                  checked={notifications.moodAlerts.enabled}
+                  onCheckedChange={(checked) =>
+                    updateNotificationPreference("moodAlerts", { enabled: checked })
+                  }
+                />
+              </div>
+              {notifications.moodAlerts.enabled && (
+                <div className="flex items-center gap-3 pl-4">
+                  <Label className="text-sm">Threshold (1-10):</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    max="10"
+                    value={notifications.moodAlerts.threshold}
+                    onChange={(e) =>
+                      updateNotificationPreference("moodAlerts", {
+                        threshold: parseInt(e.target.value) || 4,
+                      })
+                    }
+                    className="w-20"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Quiet Hours */}
+            <div className="p-4 border border-border rounded-lg space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium text-foreground">Quiet Hours</p>
+                  <p className="text-sm text-muted-foreground">Don't send notifications during these hours</p>
+                </div>
+                <Switch
+                  checked={notifications.quietHours.enabled}
+                  onCheckedChange={(checked) =>
+                    updateNotificationPreference("quietHours", { enabled: checked })
+                  }
+                />
+              </div>
+              {notifications.quietHours.enabled && (
+                <div className="flex items-center gap-3 pl-4 flex-wrap">
+                  <Label className="text-sm">Start:</Label>
+                  <Input
+                    type="time"
+                    value={notifications.quietHours.start}
+                    onChange={(e) =>
+                      updateNotificationPreference("quietHours", { start: e.target.value })
+                    }
+                    className="w-32"
+                  />
+                  <Label className="text-sm">End:</Label>
+                  <Input
+                    type="time"
+                    value={notifications.quietHours.end}
+                    onChange={(e) =>
+                      updateNotificationPreference("quietHours", { end: e.target.value })
+                    }
+                    className="w-32"
+                  />
+                </div>
+              )}
+            </div>
           </div>
+
+          <Button className="mt-6" onClick={handleSave} disabled={!hasNotificationChanges}>
+            Save Notification Preferences
+          </Button>
         </Card>
       </main>
     </div>

@@ -12,6 +12,7 @@ import { motion, useInView } from "framer-motion"
 import { useAuth } from "@/contexts/auth-context"
 import { db } from "@/lib/firebase"
 import { collection, query, where, getDocs, Timestamp } from "firebase/firestore"
+import { decryptMessage } from "@/lib/crypto"
 
 function ScrollCard({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
   const ref = useRef(null)
@@ -127,16 +128,18 @@ export default function DashboardPage() {
         const journalsSnapshot = await getDocs(journalsQuery)
 
         const journalEntries: JournalEntry[] = []
-        journalsSnapshot.forEach(doc => {
+        for (const doc of journalsSnapshot.docs) {
           const data = doc.data()
+          // Decrypt the journal content
+          const decryptedContent = await decryptMessage(data.content || "", user.uid)
           journalEntries.push({
             id: doc.id,
-            content: data.content || "",
+            content: decryptedContent,
             emotion: data.emotion || "Thoughtful",
             mentalState: data.mentalState || "Reflective",
             createdAt: data.createdAt,
           })
-        })
+        }
 
         // Sort by createdAt descending
         journalEntries.sort((a, b) => {
@@ -298,20 +301,20 @@ export default function DashboardPage() {
     <div className="min-h-screen gradient-bg">
       <DashboardNav />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="flex justify-between items-center mb-8"
+          className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8"
         >
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Welcome Back</h1>
-            <p className="text-muted-foreground mt-1">Here's your mental wellness overview</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Welcome Back</h1>
+            <p className="text-sm sm:text-base text-muted-foreground mt-1">Here's your mental wellness overview</p>
           </div>
-          <Link href="/journal/new">
-            <Button className="gap-2">
+          <Link href="/journal/new" className="w-full sm:w-auto">
+            <Button className="gap-2 w-full sm:w-auto">
               <Plus className="w-4 h-4" />
               New Entry
             </Button>
@@ -319,20 +322,20 @@ export default function DashboardPage() {
         </motion.div>
 
         {/* Stats Grid */}
-        <div className="grid md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
           >
-            <Card className="p-6 hover:shadow-lg transition-all">
+            <Card className="p-4 sm:p-6 hover:shadow-lg transition-all">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Current Streak</p>
-                  <p className="text-3xl font-bold text-foreground">{stats.streak} {stats.streak === 1 ? 'day' : 'days'}</p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm text-muted-foreground mb-1">Current Streak</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-foreground truncate">{stats.streak} {stats.streak === 1 ? 'day' : 'days'}</p>
                 </div>
-                <div className="p-3 bg-primary/10 rounded-lg">
-                  <Calendar className="w-6 h-6 text-primary" />
+                <div className="p-2 sm:p-3 bg-primary/10 rounded-lg flex-shrink-0 ml-2">
+                  <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
                 </div>
               </div>
             </Card>
@@ -343,14 +346,14 @@ export default function DashboardPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.3 }}
           >
-            <Card className="p-6 hover:shadow-lg transition-all">
+            <Card className="p-4 sm:p-6 hover:shadow-lg transition-all">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Total Entries</p>
-                  <p className="text-3xl font-bold text-foreground">{stats.totalEntries}</p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm text-muted-foreground mb-1">Total Entries</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-foreground truncate">{stats.totalEntries}</p>
                 </div>
-                <div className="p-3 bg-secondary/10 rounded-lg">
-                  <Heart className="w-6 h-6 text-secondary" />
+                <div className="p-2 sm:p-3 bg-secondary/10 rounded-lg flex-shrink-0 ml-2">
+                  <Heart className="w-5 h-5 sm:w-6 sm:h-6 text-secondary" />
                 </div>
               </div>
             </Card>
@@ -361,14 +364,14 @@ export default function DashboardPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.4 }}
           >
-            <Card className="p-6 hover:shadow-lg transition-all">
+            <Card className="p-4 sm:p-6 hover:shadow-lg transition-all sm:col-span-2 md:col-span-1">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Avg. Mood</p>
-                  <p className="text-3xl font-bold text-foreground">{stats.avgMood.toFixed(1)}/10</p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm text-muted-foreground mb-1">Avg. Mood</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-foreground truncate">{stats.avgMood.toFixed(1)}/10</p>
                 </div>
-                <div className="p-3 bg-accent/10 rounded-lg">
-                  <TrendingUp className="w-6 h-6 text-accent" />
+                <div className="p-2 sm:p-3 bg-accent/10 rounded-lg flex-shrink-0 ml-2">
+                  <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-accent" />
                 </div>
               </div>
             </Card>
@@ -376,82 +379,106 @@ export default function DashboardPage() {
         </div>
 
         {/* Charts */}
-        <div className="grid lg:grid-cols-2 gap-6 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
           <ScrollCard delay={0.6}>
-            <Card className="p-6 hover:shadow-lg transition-all">
-              <h2 className="text-lg font-semibold text-foreground mb-4">Weekly Mood Trend</h2>
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={moodData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-                  <XAxis dataKey="day" stroke="var(--color-muted-foreground)" />
-                  <YAxis domain={[0, 10]} stroke="var(--color-muted-foreground)" />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "var(--color-card)",
-                      border: "1px solid var(--color-border)",
-                      borderRadius: "8px",
-                    }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="mood"
-                    stroke="var(--color-primary)"
-                    strokeWidth={2}
-                    dot={{ fill: "var(--color-primary)" }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+            <Card className="p-4 sm:p-6 hover:shadow-lg transition-all">
+              <h2 className="text-base sm:text-lg font-semibold text-foreground mb-3 sm:mb-4">Weekly Mood Trend</h2>
+              <div className="w-full" style={{ height: '250px' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={moodData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+                    <XAxis 
+                      dataKey="day" 
+                      stroke="var(--color-muted-foreground)" 
+                      tick={{ fontSize: 12 }}
+                      interval="preserveStartEnd"
+                    />
+                    <YAxis 
+                      domain={[0, 10]} 
+                      stroke="var(--color-muted-foreground)" 
+                      tick={{ fontSize: 12 }}
+                      width={40}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "var(--color-card)",
+                        border: "1px solid var(--color-border)",
+                        borderRadius: "8px",
+                        fontSize: "12px",
+                      }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="mood"
+                      stroke="var(--color-primary)"
+                      strokeWidth={2}
+                      dot={{ fill: "var(--color-primary)", r: 4 }}
+                      activeDot={{ r: 6 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
             </Card>
           </ScrollCard>
 
           <ScrollCard delay={0.8}>
-            <Card className="p-6 hover:shadow-lg transition-all">
-              <h2 className="text-lg font-semibold text-foreground mb-4">Journal Entries</h2>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={streakData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-                  <XAxis dataKey="week" stroke="var(--color-muted-foreground)" />
-                  <YAxis 
-                    stroke="var(--color-muted-foreground)" 
-                    ticks={[0, 5, 10, 15, 20, 25, 30]}
-                    domain={[0, 30]}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "var(--color-card)",
-                      border: "1px solid var(--color-border)",
-                      borderRadius: "8px",
-                    }}
-                  />
-                  <Bar dataKey="entries" fill="var(--color-secondary)" radius={[8, 8, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+            <Card className="p-4 sm:p-6 hover:shadow-lg transition-all">
+              <h2 className="text-base sm:text-lg font-semibold text-foreground mb-3 sm:mb-4">Journal Entries</h2>
+              <div className="w-full" style={{ height: '250px' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={streakData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+                    <XAxis 
+                      dataKey="week" 
+                      stroke="var(--color-muted-foreground)" 
+                      tick={{ fontSize: 12 }}
+                      interval="preserveStartEnd"
+                    />
+                    <YAxis 
+                      stroke="var(--color-muted-foreground)" 
+                      ticks={[0, 5, 10, 15, 20, 25, 30]}
+                      domain={[0, 30]}
+                      tick={{ fontSize: 12 }}
+                      width={40}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "var(--color-card)",
+                        border: "1px solid var(--color-border)",
+                        borderRadius: "8px",
+                        fontSize: "12px",
+                      }}
+                    />
+                    <Bar dataKey="entries" fill="var(--color-secondary)" radius={[8, 8, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             </Card>
           </ScrollCard>
         </div>
 
         {/* Recent Entries */}
         <ScrollCard delay={1}>
-          <Card className="p-6 hover:shadow-lg transition-all">
-          <h2 className="text-lg font-semibold text-foreground mb-4">Recent Entries</h2>
-          <div className="space-y-4">
+          <Card className="p-4 sm:p-6 hover:shadow-lg transition-all">
+          <h2 className="text-base sm:text-lg font-semibold text-foreground mb-3 sm:mb-4">Recent Entries</h2>
+          <div className="space-y-3 sm:space-y-4">
             {loading ? (
               <div className="text-center py-8">
                 <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
               </div>
             ) : entries.length === 0 ? (
               <div className="text-center py-8">
-                <p className="text-muted-foreground">No journal entries yet. Start writing to track your progress!</p>
+                <p className="text-sm sm:text-base text-muted-foreground px-4">No journal entries yet. Start writing to track your progress!</p>
               </div>
             ) : (
               entries.map((entry) => (
                 <Link key={entry.id} href={`/journal/${entry.id}`}>
-                  <div className="p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="font-medium text-foreground">{formatJournalDate(entry.createdAt)}</h3>
-                      <span className="text-xs px-2 py-1 bg-primary/10 text-primary rounded-full">{entry.emotion}</span>
+                  <div className="p-3 sm:p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-2">
+                      <h3 className="text-sm sm:text-base font-medium text-foreground">{formatJournalDate(entry.createdAt)}</h3>
+                      <span className="text-xs px-2 py-1 bg-primary/10 text-primary rounded-full whitespace-nowrap">{entry.emotion}</span>
                     </div>
-                    <p className="text-sm text-muted-foreground line-clamp-2">
+                    <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2 sm:line-clamp-3">
                       {entry.content.length > 100 ? `${entry.content.substring(0, 100)}...` : entry.content}
                     </p>
                   </div>

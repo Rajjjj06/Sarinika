@@ -9,6 +9,7 @@ import { ArrowLeft } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { doc, getDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
+import { decryptMessage } from "@/lib/crypto"
 
 interface JournalEntry {
   id: string
@@ -51,9 +52,12 @@ export default function JournalDetailPage() {
           return
         }
 
+        // Decrypt the journal content
+        const decryptedContent = await decryptMessage(data.content || "", user.uid)
+
         setEntry({
           id: journalDoc.id,
-          content: data.content || "",
+          content: decryptedContent,
           emotion: data.emotion || "Thoughtful",
           mentalState: data.mentalState || "Reflective",
           createdAt: data.createdAt,

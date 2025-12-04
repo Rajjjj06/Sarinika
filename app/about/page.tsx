@@ -9,8 +9,31 @@ import { CheckCircle, Users, Lightbulb } from "lucide-react"
 
 export default function AboutPage() {
   return (
-    <div className="min-h-screen gradient-bg-soft">
-      <Navbar />
+    <>
+      {/* Structured Data for SEO */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Organization",
+            "name": "Serenica",
+            "description": "AI-powered mental health companion for mindfulness and self-reflection",
+            "url": typeof window !== "undefined" ? window.location.origin : "https://serenica.app",
+            "logo": typeof window !== "undefined" ? `${window.location.origin}/placeholder-logo.png` : "https://serenica.app/placeholder-logo.png",
+            "sameAs": [
+              // Add social media links when available
+            ],
+            "contactPoint": {
+              "@type": "ContactPoint",
+              "contactType": "Customer Service",
+              "availableLanguage": "English"
+            }
+          })
+        }}
+      />
+      <div className="min-h-screen gradient-bg-soft">
+        <Navbar />
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         {/* About Section */}

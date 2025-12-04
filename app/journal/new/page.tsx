@@ -10,6 +10,8 @@ import { Sparkles } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { collection, addDoc, serverTimestamp } from "firebase/firestore"
 import { db } from "@/lib/firebase"
+import { checkNotifications } from "@/lib/utils/check-notifications"
+import { encryptMessage } from "@/lib/crypto"
 
 export default function NewJournalPage() {
   const router = useRouter()
@@ -41,17 +43,29 @@ export default function NewJournalPage() {
       const analysis = await analyzeResponse.json()
       const { emotion, mentalState } = analysis
 
-      // Step 2: Save to Firestore with AI-determined emotion and mental state
+      // Step 2: Encrypt the journal content before saving
+      const encryptedContent = await encryptMessage(content.trim(), user.uid)
+
+      // Step 3: Save to Firestore with encrypted content and AI-determined emotion and mental state
       await addDoc(collection(db, "journalEntries"), {
         userId: user.uid,
-        content: content.trim(),
+        content: encryptedContent,
         emotion: emotion,
         mentalState: mentalState,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       })
 
-      // Step 3: Navigate to dashboard
+      // Step 4: Check and create notifications (streaks, milestones, mood)
+      // Stores notifications in Firestore for notification center
+      try {
+        await checkNotifications(user.uid)
+      } catch (error) {
+        console.error("Error checking notifications:", error)
+        // Don't block navigation if notification check fails
+      }
+
+      // Step 5: Navigate to dashboard
       router.push("/dashboard")
     } catch (error) {
       console.error("Error saving journal entry:", error)

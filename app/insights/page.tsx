@@ -251,39 +251,39 @@ export default function InsightsPage() {
     <div className="min-h-screen gradient-bg-alt">
       <DashboardNav />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="mb-8"
+          className="mb-6 sm:mb-8"
         >
-          <h1 className="text-3xl font-bold text-foreground">Your Insights</h1>
-          <p className="text-muted-foreground mt-1">AI-powered analysis of your mental wellness patterns</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Your Insights</h1>
+          <p className="text-sm sm:text-base text-muted-foreground mt-1">AI-powered analysis of your mental wellness patterns</p>
         </motion.div>
 
         {/* Key Metrics */}
-        <div className="grid md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
           >
-            <Card className="p-6 hover:shadow-lg transition-all">
+            <Card className="p-4 sm:p-6 hover:shadow-lg transition-all">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Dominant Emotion</p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm text-muted-foreground mb-1">Dominant Emotion</p>
                   {loading ? (
                     <div className="h-8 w-24 bg-muted animate-pulse rounded" />
                   ) : (
                     <>
-                      <p className="text-2xl font-bold text-foreground">{dominantEmotion.emotion}</p>
+                      <p className="text-xl sm:text-2xl font-bold text-foreground truncate">{dominantEmotion.emotion}</p>
                       <p className="text-xs text-muted-foreground mt-2">{dominantEmotion.percentage}% of entries</p>
                     </>
                   )}
                 </div>
-                <div className="p-3 bg-primary/10 rounded-lg">
-                  <Brain className="w-6 h-6 text-primary" />
+                <div className="p-2 sm:p-3 bg-primary/10 rounded-lg flex-shrink-0 ml-2">
+                  <Brain className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
                 </div>
               </div>
             </Card>
@@ -294,23 +294,23 @@ export default function InsightsPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.3 }}
           >
-            <Card className="p-6 hover:shadow-lg transition-all">
+            <Card className="p-4 sm:p-6 hover:shadow-lg transition-all">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Wellness Score</p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm text-muted-foreground mb-1">Wellness Score</p>
                   {loading ? (
                     <div className="h-8 w-24 bg-muted animate-pulse rounded" />
                   ) : (
                     <>
-                      <p className="text-2xl font-bold text-foreground">{wellnessScore.score.toFixed(1)}/10</p>
-                      <p className="text-xs text-muted-foreground mt-2">
+                      <p className="text-xl sm:text-2xl font-bold text-foreground truncate">{wellnessScore.score.toFixed(1)}/10</p>
+                      <p className="text-xs text-muted-foreground mt-2 line-clamp-2">
                         {wellnessScore.change > 0 ? `Up ${wellnessScore.change.toFixed(1)}` : wellnessScore.change < 0 ? `Down ${Math.abs(wellnessScore.change).toFixed(1)}` : "No change"} from previous period
                       </p>
                     </>
                   )}
                 </div>
-                <div className="p-3 bg-secondary/10 rounded-lg">
-                  <TrendingUp className="w-6 h-6 text-secondary" />
+                <div className="p-2 sm:p-3 bg-secondary/10 rounded-lg flex-shrink-0 ml-2">
+                  <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-secondary" />
                 </div>
               </div>
             </Card>
@@ -321,23 +321,23 @@ export default function InsightsPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.4 }}
           >
-            <Card className="p-6 hover:shadow-lg transition-all">
+            <Card className="p-4 sm:p-6 hover:shadow-lg transition-all sm:col-span-2 md:col-span-1">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Consistency</p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm text-muted-foreground mb-1">Consistency</p>
                   {loading ? (
                     <div className="h-8 w-24 bg-muted animate-pulse rounded" />
                   ) : (
                     <>
-                      <p className="text-2xl font-bold text-foreground">{consistency}%</p>
-                      <p className="text-xs text-muted-foreground mt-2">
+                      <p className="text-xl sm:text-2xl font-bold text-foreground truncate">{consistency}%</p>
+                      <p className="text-xs text-muted-foreground mt-2 line-clamp-2">
                         {consistency >= 80 ? "Great journaling habit" : consistency >= 50 ? "Good consistency" : "Keep building the habit"}
                       </p>
                     </>
                   )}
                 </div>
-                <div className="p-3 bg-accent/10 rounded-lg">
-                  <Zap className="w-6 h-6 text-accent" />
+                <div className="p-2 sm:p-3 bg-accent/10 rounded-lg flex-shrink-0 ml-2">
+                  <Zap className="w-5 h-5 sm:w-6 sm:h-6 text-accent" />
                 </div>
               </div>
             </Card>
@@ -345,75 +345,93 @@ export default function InsightsPage() {
         </div>
 
         {/* Charts */}
-        <div className="grid lg:grid-cols-2 gap-6 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
           <ScrollCard delay={0.6}>
-            <Card className="p-6 hover:shadow-lg transition-all">
-              <h2 className="text-lg font-semibold text-foreground mb-4">Emotion Distribution</h2>
+            <Card className="p-4 sm:p-6 hover:shadow-lg transition-all">
+              <h2 className="text-base sm:text-lg font-semibold text-foreground mb-3 sm:mb-4">Emotion Distribution</h2>
               {loading ? (
-                <div className="h-[300px] flex items-center justify-center">
+                <div className="h-[250px] flex items-center justify-center">
                   <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                 </div>
               ) : emotionData.length === 0 ? (
-                <div className="h-[300px] flex items-center justify-center">
-                  <p className="text-muted-foreground">No data available. Start journaling to see insights!</p>
+                <div className="h-[250px] flex items-center justify-center px-4">
+                  <p className="text-sm sm:text-base text-muted-foreground text-center">No data available. Start journaling to see insights!</p>
                 </div>
               ) : (
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={emotionData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-                    <XAxis dataKey="emotion" stroke="var(--color-muted-foreground)" />
-                    <YAxis stroke="var(--color-muted-foreground)" />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "var(--color-card)",
-                        border: "1px solid var(--color-border)",
-                        borderRadius: "8px",
-                      }}
-                    />
-                    <Bar dataKey="count" fill="var(--color-primary)" radius={[8, 8, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+                <div className="w-full" style={{ height: '250px' }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={emotionData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+                      <XAxis 
+                        dataKey="emotion" 
+                        stroke="var(--color-muted-foreground)" 
+                        tick={{ fontSize: 12 }}
+                        angle={-45}
+                        textAnchor="end"
+                        height={60}
+                        interval="preserveStartEnd"
+                      />
+                      <YAxis 
+                        stroke="var(--color-muted-foreground)" 
+                        tick={{ fontSize: 12 }}
+                        width={40}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "var(--color-card)",
+                          border: "1px solid var(--color-border)",
+                          borderRadius: "8px",
+                          fontSize: "12px",
+                        }}
+                      />
+                      <Bar dataKey="count" fill="var(--color-primary)" radius={[8, 8, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
               )}
             </Card>
           </ScrollCard>
 
           <ScrollCard delay={0.8}>
-            <Card className="p-6 hover:shadow-lg transition-all">
-              <h2 className="text-lg font-semibold text-foreground mb-4">Emotion Breakdown</h2>
+            <Card className="p-4 sm:p-6 hover:shadow-lg transition-all">
+              <h2 className="text-base sm:text-lg font-semibold text-foreground mb-3 sm:mb-4">Emotion Breakdown</h2>
               {loading ? (
-                <div className="h-[300px] flex items-center justify-center">
+                <div className="h-[250px] flex items-center justify-center">
                   <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                 </div>
               ) : emotionData.length === 0 ? (
-                <div className="h-[300px] flex items-center justify-center">
-                  <p className="text-muted-foreground">No data available. Start journaling to see insights!</p>
+                <div className="h-[250px] flex items-center justify-center px-4">
+                  <p className="text-sm sm:text-base text-muted-foreground text-center">No data available. Start journaling to see insights!</p>
                 </div>
               ) : (
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={emotionData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ emotion, count }) => `${emotion}: ${count}`}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="count"
-                    >
-                      {emotionData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "var(--color-card)",
-                        border: "1px solid var(--color-border)",
-                        borderRadius: "8px",
-                      }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
+                <div className="w-full" style={{ height: '250px' }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={emotionData}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ emotion, count }) => `${emotion}: ${count}`}
+                        outerRadius="70%"
+                        fill="#8884d8"
+                        dataKey="count"
+                      >
+                        {emotionData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "var(--color-card)",
+                          border: "1px solid var(--color-border)",
+                          borderRadius: "8px",
+                          fontSize: "12px",
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
               )}
             </Card>
           </ScrollCard>
@@ -421,26 +439,26 @@ export default function InsightsPage() {
 
         {/* Themes */}
         <ScrollCard delay={1}>
-          <Card className="p-6 hover:shadow-lg transition-all">
-          <h2 className="text-lg font-semibold text-foreground mb-4">Common Themes</h2>
+          <Card className="p-4 sm:p-6 hover:shadow-lg transition-all">
+          <h2 className="text-base sm:text-lg font-semibold text-foreground mb-3 sm:mb-4">Common Themes</h2>
           {loading ? (
             <div className="flex items-center justify-center py-8">
               <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
           ) : themes.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground">No themes detected yet. Keep journaling to discover patterns!</p>
+            <div className="text-center py-8 px-4">
+              <p className="text-sm sm:text-base text-muted-foreground">No themes detected yet. Keep journaling to discover patterns!</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2 sm:space-y-3">
               {themes.map((theme, idx) => (
-                <div key={idx} className="flex items-center justify-between p-4 border border-border rounded-lg">
-                  <div>
-                    <p className="font-medium text-foreground">{theme.title}</p>
-                    <p className="text-sm text-muted-foreground">{theme.mentions} mentions</p>
+                <div key={idx} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4 p-3 sm:p-4 border border-border rounded-lg">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm sm:text-base font-medium text-foreground truncate">{theme.title}</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">{theme.mentions} mentions</p>
                   </div>
                   <div
-                    className={`text-sm font-medium ${
+                    className={`text-xs sm:text-sm font-medium whitespace-nowrap ${
                       theme.trend === "up" 
                         ? "text-secondary" 
                         : theme.trend === "down" 

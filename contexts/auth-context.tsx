@@ -21,6 +21,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      // Clear localStorage if user changed (logout or different user login)
+      const previousUserId = localStorage.getItem("serenica_user_id")
+      if (previousUserId && previousUserId !== user?.uid) {
+        // Different user logged in, clear their chat data
+        localStorage.removeItem("serenica_chat_history")
+        localStorage.removeItem("serenica_current_chat_id")
+        localStorage.removeItem("serenica_chat_id")
+      }
+      
+      if (user) {
+        // Store current user ID
+        localStorage.setItem("serenica_user_id", user.uid)
+      } else {
+        // User logged out, clear all chat data
+        localStorage.removeItem("serenica_chat_history")
+        localStorage.removeItem("serenica_current_chat_id")
+        localStorage.removeItem("serenica_chat_id")
+        localStorage.removeItem("serenica_user_id")
+      }
+      
       setUser(user)
       setLoading(false)
     })
@@ -61,6 +81,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     try {
+      // Clear localStorage on logout
+      localStorage.removeItem("serenica_chat_history")
+      localStorage.removeItem("serenica_current_chat_id")
+      localStorage.removeItem("serenica_chat_id")
+      localStorage.removeItem("serenica_user_id")
+      
       await signOut(auth)
     } catch (error) {
       console.error("Error signing out:", error)

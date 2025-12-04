@@ -88,9 +88,12 @@ function calculateMoodScore(journals: JournalEntry[], chats: ChatDocument[]): nu
   }
 
   // Analyze chat messages for sentiment indicators
+  // Note: If messages are encrypted, sentiment analysis is skipped
+  // (Encrypted messages appear as base64 strings and won't match keywords)
   for (const chat of chats) {
     const messages = chat.messages || []
     let chatScore = 5 // Neutral
+    let hasDecryptableMessages = false
 
     // Simple sentiment analysis based on keywords
     const positiveWords = [
@@ -105,6 +108,18 @@ function calculateMoodScore(journals: JournalEntry[], chats: ChatDocument[]): nu
     for (const message of messages) {
       if (message.role === "user") {
         const content = message.content.toLowerCase()
+        
+        // Check if message appears to be encrypted (base64, long, no spaces)
+        // Encrypted messages won't contain readable words
+        const isEncrypted = content.length > 50 && !content.includes(" ") && 
+                           /^[A-Za-z0-9+/=]+$/.test(message.content)
+        
+        if (isEncrypted) {
+          // Skip sentiment analysis for encrypted messages
+          continue
+        }
+        
+        hasDecryptableMessages = true
         const positiveCount = positiveWords.filter(word => content.includes(word)).length
         const negativeCount = negativeWords.filter(word => content.includes(word)).length
 
@@ -116,7 +131,11 @@ function calculateMoodScore(journals: JournalEntry[], chats: ChatDocument[]): nu
       }
     }
 
-    scores.push(Math.max(1, Math.min(10, chatScore)))
+    // Only add chat score if we found decryptable messages
+    // Otherwise, rely only on journal emotions
+    if (hasDecryptableMessages) {
+      scores.push(Math.max(1, Math.min(10, chatScore)))
+    }
   }
 
   if (scores.length === 0) return 0

@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Brain, LayoutDashboard, BookOpen, TrendingUp, User, LogOut, MessageCircle, Menu, X } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
+import { NotificationCenter } from "@/components/notification-center"
 
 export function DashboardNav() {
   const pathname = usePathname()
@@ -55,6 +56,7 @@ export function DashboardNav() {
           </div>
 
           <div className="flex items-center gap-2">
+            <NotificationCenter />
             <Button 
               variant="ghost" 
               size="sm" 

@@ -11,6 +11,8 @@ import { motion } from "framer-motion"
 import { useAuth } from "@/contexts/auth-context"
 import { db } from "@/lib/firebase"
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp, collection } from "firebase/firestore"
+import { encryptMessages, decryptMessages } from "@/lib/crypto"
+import { checkNotifications } from "@/lib/utils/check-notifications"
 
 interface Message {
   id: string
@@ -33,6 +35,16 @@ export default function ChatPage() {
     if (!user) return
 
     const loadChat = async () => {
+      // Verify that localStorage data belongs to current user
+      const storedUserId = localStorage.getItem("serenica_user_id")
+      if (storedUserId && storedUserId !== user.uid) {
+        // Different user's data in localStorage, clear it
+        localStorage.removeItem("serenica_chat_history")
+        localStorage.removeItem("serenica_current_chat_id")
+        localStorage.removeItem("serenica_chat_id")
+        return
+      }
+
       // First check if there's a chat ID to load from Firestore
       const chatId = localStorage.getItem("serenica_chat_id")
       if (chatId) {
@@ -40,9 +52,22 @@ export default function ChatPage() {
           const chatDoc = await getDoc(doc(db, "chats", chatId))
           if (chatDoc.exists()) {
             const data = chatDoc.data()
-            setMessages(data.messages || [])
+            // Verify chat belongs to current user
+            if (data.userId !== user.uid) {
+              console.warn("Chat does not belong to current user, clearing")
+              localStorage.removeItem("serenica_chat_id")
+              localStorage.removeItem("serenica_current_chat_id")
+              localStorage.removeItem("serenica_chat_history")
+              return
+            }
+            
+            const encryptedMessages = data.messages || []
+            // Decrypt messages when loading from Firestore
+            const decryptedMessages = await decryptMessages(encryptedMessages, user.uid)
+            setMessages(decryptedMessages as Message[])
             setCurrentChatId(chatId)
             localStorage.setItem("serenica_current_chat_id", chatId)
+            localStorage.setItem("serenica_user_id", user.uid)
             localStorage.removeItem("serenica_chat_id")
           }
         } catch (error) {
@@ -55,11 +80,31 @@ export default function ChatPage() {
         
         if (savedChatId && savedMessages) {
           try {
+            // Verify the chat belongs to current user by checking Firestore
+            const chatDoc = await getDoc(doc(db, "chats", savedChatId))
+            if (chatDoc.exists()) {
+              const data = chatDoc.data()
+              if (data.userId !== user.uid) {
+                // Chat belongs to different user, clear localStorage
+                localStorage.removeItem("serenica_chat_history")
+                localStorage.removeItem("serenica_current_chat_id")
+                return
+              }
+            }
+            
             const parsed = JSON.parse(savedMessages)
-            setMessages(parsed)
+            // Messages in localStorage are unencrypted (for quick access)
+            // But if they came from Firestore, they might be encrypted
+            // Try to decrypt them (will return original if not encrypted)
+            const decryptedMessages = await decryptMessages(parsed, user.uid)
+            setMessages(decryptedMessages as Message[])
             setCurrentChatId(savedChatId)
+            localStorage.setItem("serenica_user_id", user.uid)
           } catch (error) {
             console.error("Error loading chat history:", error)
+            // Clear potentially corrupted data
+            localStorage.removeItem("serenica_chat_history")
+            localStorage.removeItem("serenica_current_chat_id")
           }
         }
       }
@@ -91,32 +136,65 @@ export default function ChatPage() {
           }
         }
 
+        // Encrypt messages before saving to Firestore
+        console.log("Encrypting messages for Firestore...", { messageCount: messages.length })
+        const encryptedMessages = await encryptMessages(messages, user.uid)
+        console.log("Messages encrypted successfully")
+
         if (currentChatId) {
           // Update existing chat - don't change the name
+          console.log("Updating existing chat in Firestore:", currentChatId)
           await updateDoc(doc(db, "chats", currentChatId), {
-            messages: messages,
+            messages: encryptedMessages,
             updatedAt: serverTimestamp(),
           })
+          console.log("Chat updated successfully in Firestore")
         } else {
           // Create new chat with auto-generated ID and smart name
+          console.log("Creating new chat in Firestore...")
           const newChatRef = doc(collection(db, "chats"))
           await setDoc(newChatRef, {
             userId: user.uid,
             name: chatName,
-            messages: messages,
+            messages: encryptedMessages,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
           })
+          console.log("New chat created in Firestore:", newChatRef.id, {
+            userId: user.uid,
+            name: chatName,
+            messageCount: encryptedMessages.length
+          })
           setCurrentChatId(newChatRef.id)
           localStorage.setItem("serenica_current_chat_id", newChatRef.id)
+          localStorage.setItem("serenica_user_id", user.uid)
+          
+          // Check and create notifications for new chats (streaks, milestones, mood)
+          // Stores notifications in Firestore for notification center
+          try {
+            await checkNotifications(user.uid)
+          } catch (error) {
+            console.error("Error checking notifications:", error)
+            // Don't block if notification check fails
+          }
         }
 
-        // Also save to localStorage for quick access
+        // Also save to localStorage for quick access (unencrypted for performance)
+        // Note: localStorage is less secure but faster for quick access
         localStorage.setItem(STORAGE_KEY, JSON.stringify(messages))
+        localStorage.setItem("serenica_user_id", user.uid)
       } catch (error) {
         console.error("Error saving to Firestore:", error)
+        console.error("Error details:", {
+          errorMessage: error instanceof Error ? error.message : String(error),
+          errorStack: error instanceof Error ? error.stack : undefined,
+          userId: user.uid,
+          messageCount: messages.length,
+          currentChatId: currentChatId
+        })
         // Fallback to localStorage if Firestore fails
         localStorage.setItem(STORAGE_KEY, JSON.stringify(messages))
+        alert("Failed to save chat to database. Check browser console for details.")
       }
     }
 
@@ -178,34 +256,83 @@ export default function ChatPage() {
 
         // Read streaming response
         const reader = response.body?.getReader()
-        const decoder = new TextDecoder()
+        if (!reader) {
+          throw new Error("No response body reader available")
+        }
+        
+        const decoder = new TextDecoder("utf-8")
+        const assistantMessageId = (Date.now() + 1).toString()
+        let accumulatedContent = ""
 
+        // Create assistant message
         const assistantMessage: Message = {
-          id: (Date.now() + 1).toString(),
+          id: assistantMessageId,
           role: "assistant",
           content: "",
         }
 
         setMessages((prev) => [...prev, assistantMessage])
 
-        if (reader) {
+        // Read stream chunks
+        try {
           while (true) {
             const { done, value } = await reader.read()
             if (done) break
 
-            const chunk = decoder.decode(value)
-            const content = chunk
+            if (value) {
+              // Decode chunk (handle partial UTF-8 characters properly)
+              const chunk = decoder.decode(value, { stream: true })
+              
+              if (chunk) {
+                accumulatedContent += chunk
 
-            // Update the last message with streaming content
-            setMessages((prev) => {
-              const updated = [...prev]
-              const lastMessage = updated[updated.length - 1]
-              if (lastMessage.role === "assistant") {
-                lastMessage.content += content
+                // Update only the assistant message with accumulated content
+                // Use functional update to ensure we're working with latest state
+                setMessages((prev) => {
+                  // Find the assistant message by ID
+                  const messageIndex = prev.findIndex(
+                    (msg) => msg.id === assistantMessageId && msg.role === "assistant"
+                  )
+                  
+                  if (messageIndex !== -1) {
+                    // Create new array with updated message
+                    const updated = [...prev]
+                    updated[messageIndex] = {
+                      ...updated[messageIndex],
+                      content: accumulatedContent,
+                    }
+                    return updated
+                  }
+                  
+                  return prev
+                })
               }
-              return updated
+            }
+          }
+          
+          // Final decode for any remaining buffer
+          const finalChunk = decoder.decode()
+          if (finalChunk) {
+            accumulatedContent += finalChunk
+            setMessages((prev) => {
+              const messageIndex = prev.findIndex(
+                (msg) => msg.id === assistantMessageId && msg.role === "assistant"
+              )
+              
+              if (messageIndex !== -1) {
+                const updated = [...prev]
+                updated[messageIndex] = {
+                  ...updated[messageIndex],
+                  content: accumulatedContent,
+                }
+                return updated
+              }
+              
+              return prev
             })
           }
+        } finally {
+          reader.releaseLock()
         }
       } catch (error) {
         console.error("Error:", error)
