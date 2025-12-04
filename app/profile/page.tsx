@@ -25,7 +25,7 @@ import {
   getDoc,
 } from "firebase/firestore"
 import { useRouter } from "next/navigation"
-import { decryptMessages, decryptMessage, exportEncryptionKey, importEncryptionKey } from "@/lib/crypto"
+import { decryptMessages, decryptMessage, exportEncryptionKey, importEncryptionKey, isStillEncrypted } from "@/lib/crypto"
 
 interface ChatHistory {
   id: string

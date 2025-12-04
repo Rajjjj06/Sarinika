@@ -11,7 +11,7 @@ import { motion } from "framer-motion"
 import { useAuth } from "@/contexts/auth-context"
 import { db } from "@/lib/firebase"
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp, collection } from "firebase/firestore"
-import { encryptMessages, decryptMessages } from "@/lib/crypto"
+import { encryptMessages, decryptMessages, isStillEncrypted } from "@/lib/crypto"
 import { checkNotifications } from "@/lib/utils/check-notifications"
 
 interface Message {
@@ -408,7 +408,18 @@ export default function ChatPage() {
                         : "bg-secondary text-secondary-foreground rounded-bl-none"
                     }`}
                   >
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                    {isStillEncrypted(message.content) ? (
+                      <div className="text-sm">
+                        <p className="text-muted-foreground/70 italic mb-1">
+                          ⚠️ This message was encrypted with an old system and cannot be decrypted.
+                        </p>
+                        <p className="text-xs text-muted-foreground/50 font-mono break-all">
+                          {message.content.substring(0, 100)}...
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                    )}
                   </div>
                 </motion.div>
               ))
